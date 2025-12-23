@@ -8,6 +8,7 @@ import { UnitProvider } from "@/contexts/UnitContext";
 import Auth from "./pages/Auth";
 import Dashboard from "./pages/Dashboard";
 import Agenda from "./pages/Agenda";
+import Clientes from "./pages/Clientes";
 import Profissionais from "./pages/Profissionais";
 import Servicos from "./pages/Servicos";
 import Financeiro from "./pages/Financeiro";
@@ -23,6 +24,7 @@ const ProtectedRoutes = () => (
     <Routes>
       <Route path="/dashboard" element={<Dashboard />} />
       <Route path="/agenda" element={<Agenda />} />
+      <Route path="/clientes" element={<Clientes />} />
       <Route path="/profissionais" element={<Profissionais />} />
       <Route path="/servicos" element={<Servicos />} />
       <Route path="/financeiro" element={<Financeiro />} />

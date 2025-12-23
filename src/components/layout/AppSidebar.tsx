@@ -3,6 +3,7 @@ import {
   LayoutDashboard,
   Calendar,
   Users,
+  UserRound,
   Scissors,
   DollarSign,
   Settings,
@@ -40,6 +41,7 @@ import { useCurrentUnit } from "@/contexts/UnitContext";
 const menuItems = [
   { title: "Dashboard", url: "/dashboard", icon: LayoutDashboard },
   { title: "Agenda", url: "/agenda", icon: Calendar },
+  { title: "Clientes", url: "/clientes", icon: UserRound },
   { title: "Profissionais", url: "/profissionais", icon: Users },
   { title: "Serviços", url: "/servicos", icon: Scissors },
   { title: "Financeiro", url: "/financeiro", icon: DollarSign },
