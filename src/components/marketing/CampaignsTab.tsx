@@ -25,7 +25,7 @@ export function CampaignsTab() {
   const [searchTerm, setSearchTerm] = useState("");
   const [isSending, setIsSending] = useState(false);
 
-  const { data: clients = [], isLoading } = useClients(filter);
+  const { clients, isLoading } = useClients(filter);
 
   const filteredClients = clients.filter((client) =>
     client.name.toLowerCase().includes(searchTerm.toLowerCase()) ||

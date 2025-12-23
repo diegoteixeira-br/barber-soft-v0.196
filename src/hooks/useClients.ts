@@ -1,6 +1,7 @@
-import { useQuery } from "@tanstack/react-query";
+import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { useCurrentUnit } from "@/contexts/UnitContext";
+import { useToast } from "@/hooks/use-toast";
 
 export interface Client {
   id: string;
@@ -20,8 +21,10 @@ export type ClientFilter = "all" | "birthday_month" | "inactive";
 
 export function useClients(filter: ClientFilter = "all") {
   const { currentUnitId } = useCurrentUnit();
+  const queryClient = useQueryClient();
+  const { toast } = useToast();
 
-  return useQuery({
+  const query = useQuery({
     queryKey: ["clients", currentUnitId, filter],
     queryFn: async () => {
       if (!currentUnitId) return [];
@@ -59,4 +62,55 @@ export function useClients(filter: ClientFilter = "all") {
     },
     enabled: !!currentUnitId,
   });
+
+  const updateClient = useMutation({
+    mutationFn: async ({ id, ...data }: Partial<Client> & { id: string }) => {
+      const { error } = await supabase
+        .from("clients")
+        .update({
+          name: data.name,
+          phone: data.phone,
+          birth_date: data.birth_date,
+          tags: data.tags,
+        })
+        .eq("id", id);
+      if (error) throw error;
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["clients"] });
+      toast({ title: "Cliente atualizado com sucesso!" });
+    },
+    onError: (error: Error) => {
+      toast({
+        title: "Erro ao atualizar cliente",
+        description: error.message,
+        variant: "destructive",
+      });
+    },
+  });
+
+  const deleteClient = useMutation({
+    mutationFn: async (id: string) => {
+      const { error } = await supabase.from("clients").delete().eq("id", id);
+      if (error) throw error;
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["clients"] });
+      toast({ title: "Cliente removido com sucesso!" });
+    },
+    onError: (error: Error) => {
+      toast({
+        title: "Erro ao remover cliente",
+        description: error.message,
+        variant: "destructive",
+      });
+    },
+  });
+
+  return {
+    clients: query.data || [],
+    isLoading: query.isLoading,
+    updateClient,
+    deleteClient,
+  };
 }
