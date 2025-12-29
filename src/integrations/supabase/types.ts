@@ -289,6 +289,207 @@ export type Database = {
         }
         Relationships: []
       }
+      expenses: {
+        Row: {
+          amount: number
+          category: string
+          company_id: string | null
+          created_at: string
+          description: string | null
+          expense_date: string
+          id: string
+          is_recurring: boolean | null
+          payment_method: string | null
+          unit_id: string
+        }
+        Insert: {
+          amount: number
+          category: string
+          company_id?: string | null
+          created_at?: string
+          description?: string | null
+          expense_date?: string
+          id?: string
+          is_recurring?: boolean | null
+          payment_method?: string | null
+          unit_id: string
+        }
+        Update: {
+          amount?: number
+          category?: string
+          company_id?: string | null
+          created_at?: string
+          description?: string | null
+          expense_date?: string
+          id?: string
+          is_recurring?: boolean | null
+          payment_method?: string | null
+          unit_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "expenses_company_id_fkey"
+            columns: ["company_id"]
+            isOneToOne: false
+            referencedRelation: "companies"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "expenses_unit_id_fkey"
+            columns: ["unit_id"]
+            isOneToOne: false
+            referencedRelation: "units"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      product_sales: {
+        Row: {
+          appointment_id: string | null
+          barber_id: string | null
+          client_name: string | null
+          client_phone: string | null
+          company_id: string | null
+          created_at: string
+          id: string
+          product_id: string
+          quantity: number
+          sale_date: string
+          total_price: number
+          unit_id: string
+          unit_price: number
+        }
+        Insert: {
+          appointment_id?: string | null
+          barber_id?: string | null
+          client_name?: string | null
+          client_phone?: string | null
+          company_id?: string | null
+          created_at?: string
+          id?: string
+          product_id: string
+          quantity?: number
+          sale_date?: string
+          total_price: number
+          unit_id: string
+          unit_price: number
+        }
+        Update: {
+          appointment_id?: string | null
+          barber_id?: string | null
+          client_name?: string | null
+          client_phone?: string | null
+          company_id?: string | null
+          created_at?: string
+          id?: string
+          product_id?: string
+          quantity?: number
+          sale_date?: string
+          total_price?: number
+          unit_id?: string
+          unit_price?: number
+        }
+        Relationships: [
+          {
+            foreignKeyName: "product_sales_appointment_id_fkey"
+            columns: ["appointment_id"]
+            isOneToOne: false
+            referencedRelation: "appointments"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "product_sales_barber_id_fkey"
+            columns: ["barber_id"]
+            isOneToOne: false
+            referencedRelation: "barbers"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "product_sales_company_id_fkey"
+            columns: ["company_id"]
+            isOneToOne: false
+            referencedRelation: "companies"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "product_sales_product_id_fkey"
+            columns: ["product_id"]
+            isOneToOne: false
+            referencedRelation: "products"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "product_sales_unit_id_fkey"
+            columns: ["unit_id"]
+            isOneToOne: false
+            referencedRelation: "units"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      products: {
+        Row: {
+          company_id: string | null
+          cost_price: number
+          created_at: string
+          description: string | null
+          id: string
+          is_active: boolean | null
+          min_stock_alert: number | null
+          name: string
+          sale_price: number
+          sku: string | null
+          stock_quantity: number
+          unit_id: string
+          updated_at: string
+        }
+        Insert: {
+          company_id?: string | null
+          cost_price?: number
+          created_at?: string
+          description?: string | null
+          id?: string
+          is_active?: boolean | null
+          min_stock_alert?: number | null
+          name: string
+          sale_price: number
+          sku?: string | null
+          stock_quantity?: number
+          unit_id: string
+          updated_at?: string
+        }
+        Update: {
+          company_id?: string | null
+          cost_price?: number
+          created_at?: string
+          description?: string | null
+          id?: string
+          is_active?: boolean | null
+          min_stock_alert?: number | null
+          name?: string
+          sale_price?: number
+          sku?: string | null
+          stock_quantity?: number
+          unit_id?: string
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "products_company_id_fkey"
+            columns: ["company_id"]
+            isOneToOne: false
+            referencedRelation: "companies"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "products_unit_id_fkey"
+            columns: ["unit_id"]
+            isOneToOne: false
+            referencedRelation: "units"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       services: {
         Row: {
           company_id: string | null
