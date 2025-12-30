@@ -1,48 +1,48 @@
 import { useScrollAnimation } from "@/hooks/useScrollAnimation";
 import {
   BarChart3,
-  Scissors,
   CalendarDays,
+  Percent,
   Megaphone,
   Building2,
-  ShieldCheck,
+  MessageCircle,
 } from "lucide-react";
 
 const features = [
   {
     icon: BarChart3,
     title: "Dashboard Financeiro",
-    description: "Controle total de caixa e lucros em tempo real.",
+    description: "Faturamento, métricas em tempo real, gráficos de receita e controle total de caixa.",
     color: "gold",
-  },
-  {
-    icon: Scissors,
-    title: "Comissões Automáticas",
-    description: "Chega de conta na calculadora. Sistema calcula tudo.",
-    color: "orange-neon",
   },
   {
     icon: CalendarDays,
     title: "Agenda Inteligente",
-    description: "Visualização por dia, semana ou barbeiro.",
+    description: "Visualização por dia, semana ou mês. Filtro por profissional e gestão de horários.",
+    color: "orange-neon",
+  },
+  {
+    icon: Percent,
+    title: "Comissões Automáticas",
+    description: "Cálculo automático de comissões por profissional com relatórios detalhados.",
     color: "gold",
   },
   {
     icon: Megaphone,
-    title: "Marketing CRM",
-    description: "Dispare promoções e lembretes de aniversário.",
+    title: "Marketing Inteligente",
+    description: "Campanhas personalizadas, automações de aniversário e resgate de clientes inativos.",
     color: "orange-neon",
   },
   {
     icon: Building2,
     title: "Multi-Unidades",
-    description: "Gerencie todas as suas filiais num só lugar.",
+    description: "Gerencie todas as suas filiais num só lugar com relatórios comparativos.",
     color: "gold",
   },
   {
-    icon: ShieldCheck,
-    title: "Anti-Furo",
-    description: "Lembretes automáticos que reduzem faltas em 80%.",
+    icon: MessageCircle,
+    title: "Integração WhatsApp",
+    description: "Conecte via QR Code e automatize atendimento, confirmações e lembretes.",
     color: "orange-neon",
   },
 ];
@@ -74,7 +74,7 @@ export function FeaturesGrid() {
           {features.map((feature, index) => (
             <div
               key={index}
-              className={`group relative p-6 rounded-2xl bg-charcoal/50 border border-border/30 hover:border-${feature.color}/50 transition-all duration-500 hover:transform hover:scale-[1.02] overflow-hidden ${
+              className={`group relative p-6 rounded-2xl bg-charcoal/50 border border-border/30 hover:border-gold/50 transition-all duration-500 hover:transform hover:scale-[1.02] overflow-hidden ${
                 isVisible
                   ? "opacity-100 translate-y-0"
                   : "opacity-0 translate-y-8"
@@ -83,12 +83,14 @@ export function FeaturesGrid() {
             >
               {/* Glow effect on hover */}
               <div
-                className={`absolute inset-0 bg-gradient-to-br from-${feature.color}/10 to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-500`}
+                className="absolute inset-0 bg-gradient-to-br from-gold/10 to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-500"
               />
 
               <div className="relative z-10">
                 <div
-                  className={`w-14 h-14 rounded-xl bg-${feature.color}/10 flex items-center justify-center mb-4 group-hover:scale-110 transition-transform duration-300`}
+                  className={`w-14 h-14 rounded-xl ${
+                    feature.color === "gold" ? "bg-gold/10" : "bg-orange-neon/10"
+                  } flex items-center justify-center mb-4 group-hover:scale-110 transition-transform duration-300`}
                 >
                   <feature.icon
                     className={`h-7 w-7 ${

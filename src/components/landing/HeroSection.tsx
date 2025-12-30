@@ -19,18 +19,18 @@ export function HeroSection() {
           <div className="text-center lg:text-left">
             <div className="inline-flex items-center gap-2 px-4 py-2 rounded-full bg-gold/10 border border-gold/20 mb-6 animate-fade-in">
               <span className="w-2 h-2 rounded-full bg-green-500 animate-pulse" />
-              <span className="text-sm text-gold">+500 barbearias automatizadas</span>
+              <span className="text-sm text-gold">Sistema completo de gestão para barbearias</span>
             </div>
 
             <h1 className="text-4xl md:text-5xl lg:text-6xl font-bold text-foreground leading-tight mb-6 animate-fade-in">
-              Pare de perder tempo no WhatsApp.{" "}
-              <span className="text-gold">Deixe a IA agendar para você.</span>
+              Gestão completa da sua barbearia.{" "}
+              <span className="text-gold">Do agendamento ao financeiro.</span>
             </h1>
 
             <p className="text-lg md:text-xl text-muted-foreground mb-8 max-w-xl mx-auto lg:mx-0 animate-fade-in">
-              O Sistema de Gestão Completo com Atendente Virtual Integrado.{" "}
+              Agenda, financeiro, comissões, clientes, estoque e marketing.{" "}
               <span className="text-foreground">
-                Seu barbeiro foca no corte, nosso robô foca na agenda.
+                Tudo integrado com WhatsApp para automatizar seu atendimento.
               </span>
             </p>
 
@@ -88,7 +88,7 @@ export function HeroSection() {
               <div className="aspect-video bg-background rounded overflow-hidden">
                 <img
                   src="https://images.unsplash.com/photo-1460925895917-afdab827c52f?w=800&h=450&fit=crop"
-                  alt="Dashboard BarberSoft"
+                  alt="Dashboard BarberSoft - Gestão completa da sua barbearia"
                   className="w-full h-full object-cover opacity-80"
                 />
                 <div className="absolute inset-0 bg-gradient-to-t from-background/80 to-transparent" />

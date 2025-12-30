@@ -7,21 +7,21 @@ const testimonials = [
     role: "Dono da Barbearia Premium",
     avatar: "CS",
     rating: 5,
-    text: "Desde que implementei o Jackson, minhas faltas caíram 70%. O sistema se paga no primeiro mês!",
+    text: "Com os lembretes automáticos, minhas faltas caíram 80%. O controle financeiro me mostra exatamente quanto cada barbeiro fatura.",
   },
   {
     name: "André Santos",
     role: "Barbearia Old School",
     avatar: "AS",
     rating: 5,
-    text: "Gestão de comissões era um pesadelo. Agora é tudo automático e meus barbeiros confiam nos números.",
+    text: "Gestão de comissões era um pesadelo. Agora é tudo automático e meus barbeiros confiam nos números. O relatório sai em segundos.",
   },
   {
     name: "Ricardo Oliveira",
     role: "Rede Barber King (3 unidades)",
     avatar: "RO",
     rating: 5,
-    text: "Controlar 3 unidades era impossível. Com o BarberSoft, gerencio tudo do celular em qualquer lugar.",
+    text: "Controlar 3 unidades era impossível. Com os relatórios multi-unidades, gerencio tudo do celular e comparo o desempenho de cada filial.",
   },
 ];
 
@@ -60,7 +60,7 @@ export function TestimonialsSection() {
             Quem usa, recomenda
           </h2>
           <p className="text-muted-foreground max-w-2xl mx-auto">
-            Mais de 500 barbearias já transformaram sua gestão com o BarberSoft.
+            Barbearias que transformaram sua gestão com o BarberSoft.
           </p>
         </div>
 

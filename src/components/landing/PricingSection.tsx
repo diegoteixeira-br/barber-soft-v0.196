@@ -1,16 +1,20 @@
 import { useScrollAnimation } from "@/hooks/useScrollAnimation";
 import { Button } from "@/components/ui/button";
 import { Check, Sparkles } from "lucide-react";
+import { useNavigate } from "react-router-dom";
 
 const plans = [
   {
     name: "Inicial",
     price: "99",
-    description: "Perfeito para quem está começando",
+    description: "Perfeito para barbearias iniciantes",
     features: [
-      "1 Barbeiro",
-      "Agenda básica",
+      "1 Unidade",
+      "Até 3 Profissionais",
+      "Agenda completa",
       "Dashboard financeiro",
+      "Gestão de clientes",
+      "Controle de serviços",
       "Suporte por email",
     ],
     highlighted: false,
@@ -20,10 +24,13 @@ const plans = [
     price: "199",
     description: "O mais escolhido pelos nossos clientes",
     features: [
-      "Até 5 Barbeiros",
+      "Até 3 Unidades",
+      "Profissionais ilimitados",
+      "Integração WhatsApp",
       "Jackson IA (Atendente Virtual)",
-      "Marketing CRM completo",
+      "Marketing e automações",
       "Comissões automáticas",
+      "Controle de estoque",
       "Relatórios avançados",
       "Suporte prioritário",
     ],
@@ -34,12 +41,13 @@ const plans = [
     price: "499",
     description: "Para redes com múltiplas unidades",
     features: [
-      "Barbeiros ilimitados",
-      "Multi-unidades",
-      "Jackson IA Premium",
+      "Unidades ilimitadas",
+      "Tudo do Profissional",
+      "Relatórios multi-unidades",
       "API personalizada",
       "Gerente de conta dedicado",
-      "Treinamento presencial",
+      "Treinamento da equipe",
+      "Personalização da marca",
     ],
     highlighted: false,
   },
@@ -47,6 +55,7 @@ const plans = [
 
 export function PricingSection() {
   const { ref, isVisible } = useScrollAnimation();
+  const navigate = useNavigate();
 
   return (
     <section id="precos" className="py-20 bg-background relative">
@@ -130,6 +139,7 @@ export function PricingSection() {
                     ? "bg-gold hover:bg-gold/90 text-black font-semibold"
                     : "bg-muted hover:bg-muted/80"
                 }`}
+                onClick={() => navigate("/auth?tab=signup")}
               >
                 Começar Agora
               </Button>

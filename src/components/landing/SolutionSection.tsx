@@ -1,12 +1,14 @@
 import { useScrollAnimation } from "@/hooks/useScrollAnimation";
 import { ChatSimulation } from "./ChatSimulation";
-import { Bot, Clock, MessageCircle, Calendar, Bell, UserCheck } from "lucide-react";
+import { Bot, Clock, MessageCircle, Calendar, Bell, UserCheck, Gift, RefreshCcw } from "lucide-react";
 
 const features = [
   { icon: Clock, text: "Responde 24 horas por dia" },
   { icon: Calendar, text: "Agenda automaticamente" },
   { icon: Bell, text: "Confirma presença" },
-  { icon: UserCheck, text: "Cobra quem sumiu" },
+  { icon: Gift, text: "Lembra aniversários" },
+  { icon: RefreshCcw, text: "Resgata clientes inativos" },
+  { icon: UserCheck, text: "Envia lembretes" },
 ];
 
 export function SolutionSection() {
@@ -29,7 +31,7 @@ export function SolutionSection() {
           <div className="text-center lg:text-left">
             <div className="inline-flex items-center gap-2 px-4 py-2 rounded-full bg-gold/10 border border-gold/20 mb-6">
               <Bot className="h-4 w-4 text-gold" />
-              <span className="text-sm text-gold">Inteligência Artificial</span>
+              <span className="text-sm text-gold">Automação Inteligente</span>
             </div>
 
             <h2 className="text-3xl md:text-4xl lg:text-5xl font-bold text-foreground mb-6">
@@ -37,7 +39,7 @@ export function SolutionSection() {
             </h2>
 
             <p className="text-lg text-muted-foreground mb-8 leading-relaxed">
-              Ele responde 24h, agenda, confirma presença e até cobra quem sumiu.{" "}
+              Ele responde 24h, agenda, confirma presença, lembra aniversários e resgata clientes inativos.{" "}
               <span className="text-foreground font-medium">
                 Tudo automático no WhatsApp da sua barbearia.
               </span>
@@ -69,7 +71,7 @@ export function SolutionSection() {
                 ))}
               </div>
               <p className="text-sm text-muted-foreground">
-                <span className="text-foreground font-semibold">+2.400</span> agendamentos automáticos este mês
+                <span className="text-foreground font-semibold">Redução de 80%</span> nas faltas com lembretes automáticos
               </p>
             </div>
           </div>
