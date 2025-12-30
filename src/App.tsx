@@ -24,6 +24,7 @@ import NotFound from "./pages/NotFound";
 import API from "./pages/institucional/API";
 import Sobre from "./pages/institucional/Sobre";
 import Blog from "./pages/institucional/Blog";
+import BlogPost from "./pages/institucional/BlogPost";
 import Carreiras from "./pages/institucional/Carreiras";
 import Contato from "./pages/institucional/Contato";
 import CentralAjuda from "./pages/institucional/CentralAjuda";
@@ -69,6 +70,7 @@ const App = () => (
             <Route path="/api" element={<API />} />
             <Route path="/sobre" element={<Sobre />} />
             <Route path="/blog" element={<Blog />} />
+            <Route path="/blog/:slug" element={<BlogPost />} />
             <Route path="/carreiras" element={<Carreiras />} />
             <Route path="/contato" element={<Contato />} />
             <Route path="/ajuda" element={<CentralAjuda />} />
