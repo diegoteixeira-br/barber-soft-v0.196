@@ -269,7 +269,7 @@ export default function Auth() {
           </Card>
 
         <p className="mt-6 text-center text-sm text-muted-foreground">
-          © 2025 BarberSoft. Todos os direitos reservados.
+          © {new Date().getFullYear()} BarberSoft. Todos os direitos reservados.
         </p>
         </div>
       </div>
@@ -456,7 +456,7 @@ export default function Auth() {
         </Card>
 
         <p className="mt-6 text-center text-sm text-muted-foreground">
-          © 2025 BarberSoft. Todos os direitos reservados.
+          © {new Date().getFullYear()} BarberSoft. Todos os direitos reservados.
         </p>
       </div>
     </div>

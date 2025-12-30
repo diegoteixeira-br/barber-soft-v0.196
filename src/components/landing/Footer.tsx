@@ -173,7 +173,7 @@ export function Footer() {
         {/* Bottom Bar */}
         <div className="pt-8 border-t border-border/30 flex flex-col md:flex-row justify-between items-center gap-4">
           <p className="text-sm text-muted-foreground">
-            © 2025 BarberSoft. Todos os direitos reservados.
+            © {new Date().getFullYear()} BarberSoft. Todos os direitos reservados.
           </p>
           <p className="text-sm text-muted-foreground">
             Desenvolvido por{' '}
