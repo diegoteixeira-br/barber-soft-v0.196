@@ -1,5 +1,8 @@
 import { useState } from "react";
-import { Send, Users, Cake, UserX, Search, CheckSquare, Square, Building2 } from "lucide-react";
+import { Send, Users, Cake, UserX, Search, CheckSquare, Square, Building2, Settings, Save } from "lucide-react";
+import { MessageTemplatesModal } from "./MessageTemplatesModal";
+import { TemplateSelector } from "./TemplateSelector";
+import { useMessageTemplates } from "@/hooks/useMessageTemplates";
 import { Button } from "@/components/ui/button";
 import { Textarea } from "@/components/ui/textarea";
 import { Input } from "@/components/ui/input";
@@ -27,7 +30,9 @@ export function CampaignsTab() {
   const [message, setMessage] = useState("");
   const [searchTerm, setSearchTerm] = useState("");
   const [isSending, setIsSending] = useState(false);
+  const [templatesModalOpen, setTemplatesModalOpen] = useState(false);
 
+  const { createTemplate } = useMessageTemplates();
   const { units } = useUnits();
   const { clients, isLoading } = useClients({
     filter,
@@ -243,15 +248,41 @@ export function CampaignsTab() {
           </CardContent>
         </Card>
 
-        {/* Message Composer */}
         <Card>
           <CardHeader>
-            <CardTitle className="text-lg">Mensagem da Campanha</CardTitle>
-            <CardDescription>
-              Use <code className="rounded bg-muted px-1">{"{{nome}}"}</code> para personalizar com o nome do cliente
-            </CardDescription>
+            <div className="flex items-center justify-between">
+              <div>
+                <CardTitle className="text-lg">Mensagem da Campanha</CardTitle>
+                <CardDescription>
+                  Use <code className="rounded bg-muted px-1">{"{{nome}}"}</code> para personalizar com o nome do cliente
+                </CardDescription>
+              </div>
+              <Button variant="outline" size="sm" onClick={() => setTemplatesModalOpen(true)}>
+                <Settings className="h-4 w-4 mr-2" />
+                Gerenciar
+              </Button>
+            </div>
           </CardHeader>
           <CardContent className="space-y-4">
+            <div className="flex gap-2">
+              <TemplateSelector onSelectTemplate={(content) => setMessage(content)} />
+              {message.trim() && (
+                <Button
+                  variant="outline"
+                  size="sm"
+                  onClick={() => {
+                    const name = prompt("Nome do template:");
+                    if (name?.trim()) {
+                      createTemplate.mutate({ name: name.trim(), content: message });
+                    }
+                  }}
+                >
+                  <Save className="h-4 w-4 mr-2" />
+                  Salvar como Template
+                </Button>
+              )}
+            </div>
+            
             <Textarea
               placeholder="Olá {{nome}}! Temos uma promoção especial para você..."
               value={message}
@@ -283,6 +314,11 @@ export function CampaignsTab() {
           </CardContent>
         </Card>
       </div>
+
+      <MessageTemplatesModal 
+        open={templatesModalOpen} 
+        onOpenChange={setTemplatesModalOpen} 
+      />
     </div>
   );
 }
