@@ -236,6 +236,11 @@ async function handleCreate(supabase: any, body: any, corsHeaders: any) {
   const serviceName = body.servico || body.service;
   const { unit_id, company_id } = body;
 
+  // NOVOS CAMPOS para cadastro completo do cliente
+  const clientBirthDate = body.data_nascimento || body.birth_date || null;
+  const clientNotes = body.observacoes || body.notes || null;
+  const clientTags = body.tags || ['Novo'];
+
   // Validações
   if (!clientName || !barberName || !serviceName || !dateTime || !unit_id) {
     return new Response(
@@ -249,6 +254,7 @@ async function handleCreate(supabase: any, body: any, corsHeaders: any) {
 
   console.log(`Creating appointment: ${clientName} with ${barberName} for ${serviceName} at ${dateTime}`);
   console.log(`Normalized phone: ${clientPhone}`);
+  console.log(`Extra client data - birth_date: ${clientBirthDate}, notes: ${clientNotes}, tags: ${JSON.stringify(clientTags)}`);
 
   // === VERIFICAR/CRIAR CLIENTE ===
   let clientCreated = false;
@@ -258,7 +264,7 @@ async function handleCreate(supabase: any, body: any, corsHeaders: any) {
     // Buscar cliente existente pelo telefone normalizado
     const { data: existingClient, error: clientFetchError } = await supabase
       .from('clients')
-      .select('id, name, phone, total_visits')
+      .select('id, name, phone, birth_date, notes, tags, total_visits')
       .eq('unit_id', unit_id)
       .eq('phone', clientPhone)
       .maybeSingle();
@@ -269,9 +275,47 @@ async function handleCreate(supabase: any, body: any, corsHeaders: any) {
 
     if (existingClient) {
       console.log('Cliente existente encontrado:', existingClient);
-      clientData = existingClient;
+      
+      // Verificar se temos novos dados para atualizar
+      const updateData: any = {};
+      if (clientBirthDate && !existingClient.birth_date) {
+        updateData.birth_date = clientBirthDate;
+      }
+      if (clientNotes && clientNotes !== existingClient.notes) {
+        updateData.notes = clientNotes;
+      }
+      if (clientTags && clientTags.length > 0) {
+        // Merge tags existentes com novas (sem duplicatas)
+        const existingTags = existingClient.tags || [];
+        const mergedTags = [...new Set([...existingTags, ...clientTags])];
+        if (JSON.stringify(mergedTags) !== JSON.stringify(existingTags)) {
+          updateData.tags = mergedTags;
+        }
+      }
+
+      // Atualizar cliente se houver novos dados
+      if (Object.keys(updateData).length > 0) {
+        console.log('Atualizando cliente existente com novos dados:', updateData);
+        const { data: updatedClient, error: updateError } = await supabase
+          .from('clients')
+          .update(updateData)
+          .eq('id', existingClient.id)
+          .select('id, name, phone, birth_date, notes, tags, total_visits')
+          .single();
+
+        if (updateError) {
+          console.error('Erro ao atualizar cliente:', updateError);
+          // Não bloquear, usar dados existentes
+          clientData = existingClient;
+        } else {
+          console.log('Cliente atualizado com sucesso:', updatedClient);
+          clientData = updatedClient;
+        }
+      } else {
+        clientData = existingClient;
+      }
     } else {
-      // Criar novo cliente - BLOQUEAR se falhar
+      // Criar novo cliente com todos os dados - BLOQUEAR se falhar
       console.log(`Criando novo cliente: ${clientName} - ${clientPhone}`);
       const { data: newClient, error: clientCreateError } = await supabase
         .from('clients')
@@ -280,9 +324,12 @@ async function handleCreate(supabase: any, body: any, corsHeaders: any) {
           company_id: company_id || null,
           name: clientName,
           phone: clientPhone,
+          birth_date: clientBirthDate,
+          notes: clientNotes,
+          tags: clientTags,
           total_visits: 0
         })
-        .select()
+        .select('id, name, phone, birth_date, notes, tags, total_visits')
         .single();
 
       if (clientCreateError) {
@@ -407,6 +454,9 @@ async function handleCreate(supabase: any, body: any, corsHeaders: any) {
         id: clientData.id,
         name: clientData.name,
         phone: clientData.phone,
+        birth_date: clientData.birth_date,
+        notes: clientData.notes,
+        tags: clientData.tags,
         is_new: clientCreated
       } : null,
       appointment: {
