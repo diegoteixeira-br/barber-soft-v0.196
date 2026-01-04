@@ -226,20 +226,72 @@ async function handleCheck(supabase: any, body: any, corsHeaders: any) {
 
 // Handler para criar agendamento
 async function handleCreate(supabase: any, body: any, corsHeaders: any) {
-  const { client_name, client_phone, professional, service, datetime, unit_id } = body;
+  // Normalizar campos (aceitar ambos formatos)
+  const clientName = body.nome || body.client_name;
+  const clientPhone = body.telefone || body.client_phone;
+  const dateTime = body.data || body.datetime;
+  const barberName = body.barbeiro_nome || body.professional;
+  const serviceName = body.servico || body.service;
+  const { unit_id, company_id } = body;
 
   // Validações
-  if (!client_name || !professional || !service || !datetime || !unit_id) {
+  if (!clientName || !barberName || !serviceName || !dateTime || !unit_id) {
     return new Response(
       JSON.stringify({ 
         success: false, 
-        error: 'Campos obrigatórios: client_name, professional, service, datetime, unit_id' 
+        error: 'Campos obrigatórios: nome/client_name, barbeiro_nome/professional, servico/service, data/datetime' 
       }),
       { status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
     );
   }
 
-  console.log(`Creating appointment: ${client_name} with ${professional} for ${service} at ${datetime}`);
+  console.log(`Creating appointment: ${clientName} with ${barberName} for ${serviceName} at ${dateTime}`);
+
+  // === VERIFICAR/CRIAR CLIENTE ===
+  let clientCreated = false;
+  let clientData = null;
+
+  if (clientPhone) {
+    // Buscar cliente existente pelo telefone
+    const { data: existingClient, error: clientFetchError } = await supabase
+      .from('clients')
+      .select('id, name, phone, total_visits')
+      .eq('unit_id', unit_id)
+      .eq('phone', clientPhone)
+      .maybeSingle();
+
+    if (clientFetchError) {
+      console.error('Error fetching client:', clientFetchError);
+    }
+
+    if (existingClient) {
+      console.log('Client already exists:', existingClient);
+      clientData = existingClient;
+    } else {
+      // Criar novo cliente
+      console.log(`Creating new client: ${clientName} - ${clientPhone}`);
+      const { data: newClient, error: clientCreateError } = await supabase
+        .from('clients')
+        .insert({
+          unit_id,
+          company_id,
+          name: clientName,
+          phone: clientPhone,
+          total_visits: 0
+        })
+        .select()
+        .single();
+
+      if (clientCreateError) {
+        console.error('Error creating client:', clientCreateError);
+        // Não bloquear - continuar mesmo sem criar cliente
+      } else {
+        console.log('New client created:', newClient);
+        clientData = newClient;
+        clientCreated = true;
+      }
+    }
+  }
 
   // Buscar o barbeiro pelo nome
   const { data: barbers, error: barberError } = await supabase
@@ -247,13 +299,13 @@ async function handleCreate(supabase: any, body: any, corsHeaders: any) {
     .select('id, name, company_id')
     .eq('unit_id', unit_id)
     .eq('is_active', true)
-    .ilike('name', `%${professional}%`)
+    .ilike('name', `%${barberName}%`)
     .limit(1);
 
   if (barberError || !barbers || barbers.length === 0) {
     console.error('Barber not found:', barberError);
     return new Response(
-      JSON.stringify({ success: false, error: `Barbeiro "${professional}" não encontrado` }),
+      JSON.stringify({ success: false, error: `Barbeiro "${barberName}" não encontrado` }),
       { status: 404, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
     );
   }
@@ -267,13 +319,13 @@ async function handleCreate(supabase: any, body: any, corsHeaders: any) {
     .select('id, name, price, duration_minutes')
     .eq('unit_id', unit_id)
     .eq('is_active', true)
-    .ilike('name', `%${service}%`)
+    .ilike('name', `%${serviceName}%`)
     .limit(1);
 
   if (serviceError || !services || services.length === 0) {
     console.error('Service not found:', serviceError);
     return new Response(
-      JSON.stringify({ success: false, error: `Serviço "${service}" não encontrado` }),
+      JSON.stringify({ success: false, error: `Serviço "${serviceName}" não encontrado` }),
       { status: 404, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
     );
   }
@@ -282,7 +334,7 @@ async function handleCreate(supabase: any, body: any, corsHeaders: any) {
   console.log('Found service:', selectedService);
 
   // Calcular end_time
-  const startTime = new Date(datetime);
+  const startTime = new Date(dateTime);
   const endTime = new Date(startTime.getTime() + selectedService.duration_minutes * 60000);
 
   // Verificar se o horário está disponível
@@ -314,11 +366,11 @@ async function handleCreate(supabase: any, body: any, corsHeaders: any) {
     .from('appointments')
     .insert({
       unit_id,
-      company_id: barber.company_id,
+      company_id: company_id || barber.company_id,
       barber_id: barber.id,
       service_id: selectedService.id,
-      client_name,
-      client_phone: client_phone || null,
+      client_name: clientName,
+      client_phone: clientPhone || null,
       start_time: startTime.toISOString(),
       end_time: endTime.toISOString(),
       total_price: selectedService.price,
@@ -341,6 +393,13 @@ async function handleCreate(supabase: any, body: any, corsHeaders: any) {
     JSON.stringify({
       success: true,
       message: 'Agendamento criado com sucesso!',
+      client_created: clientCreated,
+      client: clientData ? {
+        id: clientData.id,
+        name: clientData.name,
+        phone: clientData.phone,
+        is_new: clientCreated
+      } : null,
       appointment: {
         id: appointment.id,
         client_name: appointment.client_name,
@@ -358,7 +417,11 @@ async function handleCreate(supabase: any, body: any, corsHeaders: any) {
 
 // Handler para cancelar agendamento
 async function handleCancel(supabase: any, body: any, corsHeaders: any) {
-  const { appointment_id, client_phone, unit_id } = body;
+  // Normalizar campos
+  const appointmentId = body.appointment_id;
+  const clientPhone = body.telefone || body.client_phone;
+  const targetDate = body.data || body.datetime;
+  const { unit_id } = body;
 
   if (!unit_id) {
     return new Response(
@@ -367,63 +430,101 @@ async function handleCancel(supabase: any, body: any, corsHeaders: any) {
     );
   }
 
-  if (!appointment_id && !client_phone) {
+  if (!appointmentId && !clientPhone) {
     return new Response(
-      JSON.stringify({ success: false, error: 'Informe appointment_id ou client_phone' }),
+      JSON.stringify({ success: false, error: 'Informe appointment_id ou telefone/client_phone' }),
       { status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
     );
   }
 
-  console.log(`Cancelling appointment: id=${appointment_id}, phone=${client_phone}, unit=${unit_id}`);
+  console.log(`Cancelling appointment: id=${appointmentId}, phone=${clientPhone}, date=${targetDate}, unit=${unit_id}`);
 
-  let query = supabase
-    .from('appointments')
-    .update({ status: 'cancelled' })
-    .eq('unit_id', unit_id)
-    .in('status', ['pending', 'confirmed']);
-
-  if (appointment_id) {
-    query = query.eq('id', appointment_id);
-  } else if (client_phone) {
-    // Cancelar o próximo agendamento do cliente
-    const { data: nextAppointment, error: findError } = await supabase
+  // Se temos appointment_id, cancelar diretamente
+  if (appointmentId) {
+    const { data: cancelled, error: cancelError } = await supabase
       .from('appointments')
-      .select('id, client_name, start_time')
+      .update({ status: 'cancelled' })
+      .eq('id', appointmentId)
       .eq('unit_id', unit_id)
-      .eq('client_phone', client_phone)
       .in('status', ['pending', 'confirmed'])
-      .gte('start_time', new Date().toISOString())
-      .order('start_time', { ascending: true })
-      .limit(1);
+      .select();
 
-    if (findError || !nextAppointment || nextAppointment.length === 0) {
+    if (cancelError) {
+      console.error('Error cancelling appointment:', cancelError);
       return new Response(
-        JSON.stringify({ 
-          success: false, 
-          error: 'Nenhum agendamento futuro encontrado para este telefone' 
-        }),
+        JSON.stringify({ success: false, error: 'Erro ao cancelar agendamento' }),
+        { status: 500, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+      );
+    }
+
+    if (!cancelled || cancelled.length === 0) {
+      return new Response(
+        JSON.stringify({ success: false, error: 'Agendamento não encontrado ou já cancelado' }),
         { status: 404, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
       );
     }
 
-    query = query.eq('id', nextAppointment[0].id);
-    console.log('Found appointment to cancel:', nextAppointment[0]);
+    console.log('Appointment cancelled by ID:', cancelled[0]);
+
+    return new Response(
+      JSON.stringify({
+        success: true,
+        message: 'Agendamento cancelado com sucesso!',
+        cancelled_appointment: cancelled[0]
+      }),
+      { headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+    );
   }
 
-  const { data: cancelled, error: cancelError } = await query.select();
+  // Se temos telefone, buscar agendamento
+  let query = supabase
+    .from('appointments')
+    .select('id, client_name, start_time, status')
+    .eq('unit_id', unit_id)
+    .eq('client_phone', clientPhone)
+    .in('status', ['pending', 'confirmed']);
+
+  // Se data específica foi fornecida, filtrar por ela
+  if (targetDate) {
+    const dateOnly = targetDate.split('T')[0]; // Pegar apenas YYYY-MM-DD
+    const startOfDay = `${dateOnly}T00:00:00`;
+    const endOfDay = `${dateOnly}T23:59:59`;
+    query = query.gte('start_time', startOfDay).lte('start_time', endOfDay);
+    console.log(`Filtering by date range: ${startOfDay} to ${endOfDay}`);
+  } else {
+    // Comportamento original: próximo agendamento futuro
+    query = query.gte('start_time', new Date().toISOString());
+  }
+
+  query = query.order('start_time', { ascending: true }).limit(1);
+
+  const { data: foundAppointment, error: findError } = await query;
+
+  if (findError || !foundAppointment || foundAppointment.length === 0) {
+    const dateMsg = targetDate ? ` na data ${targetDate}` : ' futuro';
+    return new Response(
+      JSON.stringify({ 
+        success: false, 
+        error: `Nenhum agendamento${dateMsg} encontrado para este telefone` 
+      }),
+      { status: 404, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+    );
+  }
+
+  console.log('Found appointment to cancel:', foundAppointment[0]);
+
+  // Cancelar o agendamento encontrado
+  const { data: cancelled, error: cancelError } = await supabase
+    .from('appointments')
+    .update({ status: 'cancelled' })
+    .eq('id', foundAppointment[0].id)
+    .select();
 
   if (cancelError) {
     console.error('Error cancelling appointment:', cancelError);
     return new Response(
       JSON.stringify({ success: false, error: 'Erro ao cancelar agendamento' }),
       { status: 500, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
-    );
-  }
-
-  if (!cancelled || cancelled.length === 0) {
-    return new Response(
-      JSON.stringify({ success: false, error: 'Agendamento não encontrado' }),
-      { status: 404, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
     );
   }
 
