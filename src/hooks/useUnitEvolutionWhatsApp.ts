@@ -37,6 +37,7 @@ export function useUnitEvolutionWhatsApp(unit: Unit | null): UseUnitEvolutionWha
   const [currentInstanceName, setCurrentInstanceName] = useState<string | null>(null);
   const pollingRef = useRef<NodeJS.Timeout | null>(null);
   const isCreatingRef = useRef(false);
+  const previousUnitIdRef = useRef<string | null>(null);
 
   const stopPolling = useCallback(() => {
     if (pollingRef.current) {
@@ -119,7 +120,8 @@ export function useUnitEvolutionWhatsApp(unit: Unit | null): UseUnitEvolutionWha
   const startPolling = useCallback(() => {
     stopPolling();
     pollingRef.current = setInterval(() => {
-      checkStatus();
+      // Pass true to auto-refresh QR if missing
+      checkStatus(true);
     }, 3000);
   }, [checkStatus, stopPolling]);
 
@@ -326,6 +328,22 @@ export function useUnitEvolutionWhatsApp(unit: Unit | null): UseUnitEvolutionWha
       setCurrentInstanceName(null);
     }
   }, [unit?.id, currentInstanceName, unit?.evolution_instance_name, stopPolling]);
+
+  // Reset state when unit changes (prevents state leakage between units)
+  useEffect(() => {
+    if (unit?.id && previousUnitIdRef.current && previousUnitIdRef.current !== unit.id) {
+      console.log(`Unit changed from ${previousUnitIdRef.current} to ${unit.id}, resetting state`);
+      stopPolling();
+      setConnectionState("disconnected");
+      setQrCode(null);
+      setPairingCode(null);
+      setError(null);
+      setProfile(null);
+      setCurrentInstanceName(null);
+      isCreatingRef.current = false;
+    }
+    previousUnitIdRef.current = unit?.id || null;
+  }, [unit?.id, stopPolling]);
 
   // Check initial status on mount (with auto-refresh QR)
   useEffect(() => {

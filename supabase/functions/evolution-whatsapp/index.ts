@@ -156,31 +156,50 @@ serve(async (req) => {
           throw new Error('Erro ao salvar dados da instância');
         }
 
-        // Get QR Code
-        const qrResponse = await fetch(`${EVOLUTION_API_URL}/instance/connect/${instanceName}`, {
-          method: 'GET',
-          headers: {
-            'apikey': EVOLUTION_GLOBAL_KEY!,
-          },
-        });
+        // Get QR Code with retry mechanism - Evolution API may take time to generate
+        let extractedQR = null;
+        let pairingCode = null;
+        const maxRetries = 10;
+        const retryDelay = 1000; // 1 second
 
-        const qrData = await qrResponse.json();
-        console.log('QR response status:', qrResponse.status);
-        console.log('QR response data keys:', Object.keys(qrData));
-        
-        // Extract QR code from various possible response formats
-        const extractedQR = qrData.base64 || qrData.qrcode?.base64 || qrData.code;
-        console.log('Extracted QR (first 100 chars):', extractedQR?.substring(0, 100));
+        for (let attempt = 1; attempt <= maxRetries; attempt++) {
+          console.log(`QR fetch attempt ${attempt}/${maxRetries}`);
+          
+          const qrResponse = await fetch(`${EVOLUTION_API_URL}/instance/connect/${instanceName}`, {
+            method: 'GET',
+            headers: {
+              'apikey': EVOLUTION_GLOBAL_KEY!,
+            },
+          });
 
-        if (!qrResponse.ok) {
-          throw new Error(qrData.message || 'Erro ao gerar QR Code');
+          const qrData = await qrResponse.json();
+          console.log(`QR response attempt ${attempt}:`, JSON.stringify(qrData).substring(0, 200));
+          
+          // Extract QR code from various possible response formats
+          extractedQR = qrData.base64 || qrData.qrcode?.base64 || qrData.code;
+          pairingCode = qrData.pairingCode;
+
+          if (extractedQR) {
+            console.log(`QR code obtained on attempt ${attempt}`);
+            break;
+          }
+
+          // Wait before next attempt (unless last attempt)
+          if (attempt < maxRetries) {
+            await new Promise(resolve => setTimeout(resolve, retryDelay));
+          }
+        }
+
+        if (!extractedQR) {
+          console.warn('QR code not available after retries, returning without QR');
         }
 
         return new Response(JSON.stringify({
           success: true,
           instanceName,
           qrCode: extractedQR,
-          pairingCode: qrData.pairingCode,
+          pairingCode,
+          qrPending: !extractedQR, // Flag to indicate QR needs to be fetched later
         }), {
           headers: { ...corsHeaders, 'Content-Type': 'application/json' },
         });

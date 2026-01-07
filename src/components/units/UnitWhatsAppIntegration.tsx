@@ -216,7 +216,17 @@ export const UnitWhatsAppIntegration = forwardRef<UnitWhatsAppIntegrationRef, Un
                 ) : (
                   <>
                     <Loader2 className="h-8 w-8 animate-spin text-primary mb-4" />
-                    <p className="text-sm text-muted-foreground">Gerando QR Code...</p>
+                    <p className="text-sm text-muted-foreground mb-2">Gerando QR Code...</p>
+                    <Button
+                      variant="ghost"
+                      size="sm"
+                      onClick={refreshQRCode}
+                      disabled={isLoading}
+                      className="gap-2 text-muted-foreground hover:text-foreground"
+                    >
+                      <RefreshCw className={`h-3 w-3 ${isLoading ? 'animate-spin' : ''}`} />
+                      Forçar geração
+                    </Button>
                   </>
                 )}
               </div>
