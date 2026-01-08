@@ -12,10 +12,26 @@ export function HeroSection() {
 
   return (
     <section className="min-h-screen pt-24 pb-16 flex items-center relative overflow-hidden">
-      {/* Background Effects */}
-      <div className="absolute inset-0 bg-gradient-to-b from-gold/5 via-transparent to-transparent" />
-      <div className="absolute top-1/4 -left-1/4 w-1/2 h-1/2 bg-gold/10 rounded-full blur-[120px]" />
-      <div className="absolute bottom-1/4 -right-1/4 w-1/2 h-1/2 bg-orange-neon/10 rounded-full blur-[120px]" />
+      {/* Background Video */}
+      <div className="absolute inset-0 z-0">
+        <video
+          autoPlay
+          loop
+          muted
+          playsInline
+          className="w-full h-full object-cover"
+          poster="https://images.pexels.com/videos/7697186/pexels-photo-7697186.jpeg?auto=compress&cs=tinysrgb&w=1920"
+        >
+          <source 
+            src="https://videos.pexels.com/video-files/7697186/7697186-uhd_2560_1440_30fps.mp4" 
+            type="video/mp4" 
+          />
+        </video>
+        {/* Dark overlay for text readability */}
+        <div className="absolute inset-0 bg-black/70" />
+        {/* Gradient overlay to blend with page */}
+        <div className="absolute inset-0 bg-gradient-to-b from-background/50 via-transparent to-background" />
+      </div>
 
       <div className="container mx-auto px-4 relative z-10">
         <div className="grid lg:grid-cols-2 gap-12 items-center">
