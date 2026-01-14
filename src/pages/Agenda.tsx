@@ -141,16 +141,17 @@ export default function Agenda() {
     setIsFormModalOpen(true);
   };
 
-  const handleStatusChange = async (status: AppointmentStatus, isNoShow: boolean = false) => {
+  const handleStatusChange = async (status: AppointmentStatus, paymentMethod?: string) => {
     if (selectedAppointment) {
-      await updateStatus.mutateAsync({ id: selectedAppointment.id, status, isNoShow });
+      await updateStatus.mutateAsync({ id: selectedAppointment.id, status, isNoShow: false, paymentMethod });
       setIsDetailsModalOpen(false);
     }
   };
 
   const handleNoShow = async () => {
     if (selectedAppointment) {
-      await handleStatusChange("cancelled", true);
+      await updateStatus.mutateAsync({ id: selectedAppointment.id, status: "cancelled", isNoShow: true });
+      setIsDetailsModalOpen(false);
     }
   };
 

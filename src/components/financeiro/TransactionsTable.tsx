@@ -10,6 +10,7 @@ import {
 } from "@/components/ui/table";
 import { FinancialAppointment } from "@/hooks/useFinancialData";
 import { Skeleton } from "@/components/ui/skeleton";
+import { PaymentBadge } from "./PaymentMethodModal";
 
 interface TransactionsTableProps {
   appointments: FinancialAppointment[];
@@ -51,6 +52,7 @@ export function TransactionsTable({ appointments, isLoading }: TransactionsTable
             <TableHead>Cliente</TableHead>
             <TableHead>Barbeiro</TableHead>
             <TableHead>Serviço</TableHead>
+            <TableHead>Pagamento</TableHead>
             <TableHead className="text-right">Valor</TableHead>
           </TableRow>
         </TableHeader>
@@ -63,6 +65,9 @@ export function TransactionsTable({ appointments, isLoading }: TransactionsTable
               <TableCell>{appointment.client_name}</TableCell>
               <TableCell>{appointment.barber?.name || "-"}</TableCell>
               <TableCell>{appointment.service?.name || "-"}</TableCell>
+              <TableCell>
+                <PaymentBadge method={appointment.payment_method} />
+              </TableCell>
               <TableCell className="text-right font-semibold text-emerald-500">
                 {formatCurrency(appointment.total_price)}
               </TableCell>

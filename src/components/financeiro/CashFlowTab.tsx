@@ -1,5 +1,5 @@
 import { useState, useMemo } from "react";
-import { DollarSign, Calendar, TrendingUp, Users, Zap } from "lucide-react";
+import { DollarSign, Calendar, TrendingUp, Users, Zap, Banknote, Smartphone, CreditCard } from "lucide-react";
 import { useFinancialData, getDateRanges } from "@/hooks/useFinancialData";
 import { RevenueCard } from "./RevenueCard";
 import { TransactionsTable } from "./TransactionsTable";
@@ -69,6 +69,33 @@ export function CashFlowTab() {
     }
   }, [periodFilter, todayAppointments, weekAppointments, monthAppointments]);
 
+  // Calculate payment method breakdown for filtered period
+  const paymentBreakdown = useMemo(() => {
+    const breakdown = {
+      cash: { total: 0, count: 0 },
+      pix: { total: 0, count: 0 },
+      debit_card: { total: 0, count: 0 },
+      credit_card: { total: 0, count: 0 },
+    };
+
+    filteredAppointments.forEach((apt) => {
+      const method = apt.payment_method as keyof typeof breakdown;
+      if (method && breakdown[method]) {
+        breakdown[method].total += apt.total_price;
+        breakdown[method].count += 1;
+      }
+    });
+
+    return breakdown;
+  }, [filteredAppointments]);
+
+  const paymentMethodConfig = [
+    { key: "cash" as const, label: "Dinheiro", icon: Banknote, color: "text-green-500", bg: "bg-green-500/10" },
+    { key: "pix" as const, label: "PIX", icon: Smartphone, color: "text-blue-500", bg: "bg-blue-500/10" },
+    { key: "debit_card" as const, label: "Débito", icon: CreditCard, color: "text-orange-500", bg: "bg-orange-500/10" },
+    { key: "credit_card" as const, label: "Crédito", icon: CreditCard, color: "text-purple-500", bg: "bg-purple-500/10" },
+  ];
+
   return (
     <div className="space-y-6">
       {/* Revenue Cards */}
@@ -101,6 +128,23 @@ export function CashFlowTab() {
           icon={Users}
           variant="default"
         />
+      </div>
+
+      {/* Payment Method Breakdown */}
+      <div className="rounded-lg border border-border bg-card p-4">
+        <h3 className="text-sm font-medium text-muted-foreground mb-3">Faturamento por Forma de Pagamento ({periodFilter === "today" ? "Hoje" : periodFilter === "week" ? "Semana" : "Mês"})</h3>
+        <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+          {paymentMethodConfig.map(({ key, label, icon: Icon, color, bg }) => (
+            <div key={key} className={`rounded-lg ${bg} p-3`}>
+              <div className="flex items-center gap-2 mb-1">
+                <Icon className={`h-4 w-4 ${color}`} />
+                <span className={`text-sm font-medium ${color}`}>{label}</span>
+              </div>
+              <p className="text-lg font-bold text-foreground">{formatCurrency(paymentBreakdown[key].total)}</p>
+              <p className="text-xs text-muted-foreground">{paymentBreakdown[key].count} venda(s)</p>
+            </div>
+          ))}
+        </div>
       </div>
 
       {/* Period Filter */}

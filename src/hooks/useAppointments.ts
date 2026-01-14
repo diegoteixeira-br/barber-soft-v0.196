@@ -22,6 +22,7 @@ export interface Appointment {
   total_price: number;
   notes: string | null;
   created_at: string;
+  payment_method: string | null;
   barber?: {
     id: string;
     name: string;
@@ -56,6 +57,7 @@ export interface QuickServiceFormData {
   schedule_later?: boolean;
   scheduled_date?: string;
   scheduled_time?: string;
+  payment_method?: string;
 }
 
 export function useAppointments(startDate?: Date, endDate?: Date, barberId?: string | null) {
@@ -306,7 +308,7 @@ export function useAppointments(startDate?: Date, endDate?: Date, barberId?: str
   };
 
   const updateStatus = useMutation({
-    mutationFn: async ({ id, status, isNoShow = false }: { id: string; status: AppointmentStatus; isNoShow?: boolean }) => {
+    mutationFn: async ({ id, status, isNoShow = false, paymentMethod }: { id: string; status: AppointmentStatus; isNoShow?: boolean; paymentMethod?: string }) => {
       // Fetch full appointment data first for cancellation history
       if (status === "cancelled") {
         const { data: fullAppointment } = await supabase
@@ -324,9 +326,16 @@ export function useAppointments(startDate?: Date, endDate?: Date, barberId?: str
         }
       }
 
+      const updateData: Record<string, unknown> = { status };
+      
+      // Add payment_method when completing
+      if (status === "completed" && paymentMethod) {
+        updateData.payment_method = paymentMethod;
+      }
+
       const { data, error } = await supabase
         .from("appointments")
-        .update({ status })
+        .update(updateData)
         .eq("id", id)
         .select()
         .single();
@@ -337,6 +346,7 @@ export function useAppointments(startDate?: Date, endDate?: Date, barberId?: str
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["appointments"] });
       queryClient.invalidateQueries({ queryKey: ["cancellation-history"] });
+      queryClient.invalidateQueries({ queryKey: ["financial-appointments"] });
       toast({ title: "Status atualizado!" });
     },
     onError: (error) => {
@@ -410,6 +420,7 @@ export function useAppointments(startDate?: Date, endDate?: Date, barberId?: str
           total_price: data.total_price,
           notes: data.notes || null,
           status,
+          payment_method: status === "completed" ? (data.payment_method || null) : null,
         })
         .select()
         .single();

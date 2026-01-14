@@ -11,6 +11,7 @@ export interface FinancialAppointment {
   end_time: string;
   total_price: number;
   status: string;
+  payment_method: string | null;
   barber: {
     id: string;
     name: string;
@@ -46,6 +47,7 @@ export function useFinancialData(dateRange?: DateRange, barberId?: string | null
           end_time,
           total_price,
           status,
+          payment_method,
           barber:barbers(id, name, commission_rate),
           service:services(id, name, price)
         `)

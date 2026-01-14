@@ -25,6 +25,7 @@ export type Database = {
           end_time: string
           id: string
           notes: string | null
+          payment_method: string | null
           service_id: string | null
           source: string | null
           start_time: string
@@ -42,6 +43,7 @@ export type Database = {
           end_time: string
           id?: string
           notes?: string | null
+          payment_method?: string | null
           service_id?: string | null
           source?: string | null
           start_time: string
@@ -59,6 +61,7 @@ export type Database = {
           end_time?: string
           id?: string
           notes?: string | null
+          payment_method?: string | null
           service_id?: string | null
           source?: string | null
           start_time?: string
@@ -681,6 +684,7 @@ export type Database = {
           company_id: string | null
           created_at: string
           id: string
+          payment_method: string | null
           product_id: string
           quantity: number
           sale_date: string
@@ -696,6 +700,7 @@ export type Database = {
           company_id?: string | null
           created_at?: string
           id?: string
+          payment_method?: string | null
           product_id: string
           quantity?: number
           sale_date?: string
@@ -711,6 +716,7 @@ export type Database = {
           company_id?: string | null
           created_at?: string
           id?: string
+          payment_method?: string | null
           product_id?: string
           quantity?: number
           sale_date?: string

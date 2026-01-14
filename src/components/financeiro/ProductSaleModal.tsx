@@ -43,6 +43,7 @@ const formSchema = z.object({
   client_id: z.string().optional(),
   client_name: z.string().optional(),
   client_phone: z.string().optional(),
+  payment_method: z.string().min(1, "Selecione a forma de pagamento"),
 });
 
 type FormData = z.infer<typeof formSchema>;
@@ -79,6 +80,7 @@ export function ProductSaleModal({ open, onOpenChange }: ProductSaleModalProps) 
       client_id: "",
       client_name: "",
       client_phone: "",
+      payment_method: "",
     },
   });
 
@@ -91,6 +93,7 @@ export function ProductSaleModal({ open, onOpenChange }: ProductSaleModalProps) 
         client_id: "",
         client_name: "",
         client_phone: "",
+        payment_method: "",
       });
       setUseRegisteredClient(false);
       setSelectedClientId(null);
@@ -158,6 +161,7 @@ export function ProductSaleModal({ open, onOpenChange }: ProductSaleModalProps) 
       unit_price: Number(selectedProduct.sale_price),
       client_name: data.client_name || undefined,
       client_phone: data.client_phone || undefined,
+      payment_method: data.payment_method,
     });
     onOpenChange(false);
   };
@@ -241,6 +245,31 @@ export function ProductSaleModal({ open, onOpenChange }: ProductSaleModalProps) 
                 )}
               />
             </div>
+
+            {/* Payment Method */}
+            <FormField
+              control={form.control}
+              name="payment_method"
+              render={({ field }) => (
+                <FormItem>
+                  <FormLabel>Forma de Pagamento *</FormLabel>
+                  <Select onValueChange={field.onChange} value={field.value}>
+                    <FormControl>
+                      <SelectTrigger>
+                        <SelectValue placeholder="Selecione a forma de pagamento" />
+                      </SelectTrigger>
+                    </FormControl>
+                    <SelectContent>
+                      <SelectItem value="cash">💵 Dinheiro</SelectItem>
+                      <SelectItem value="pix">📱 PIX</SelectItem>
+                      <SelectItem value="debit_card">💳 Débito</SelectItem>
+                      <SelectItem value="credit_card">💳 Crédito</SelectItem>
+                    </SelectContent>
+                  </Select>
+                  <FormMessage />
+                </FormItem>
+              )}
+            />
 
             {/* Client Section */}
             <div className="space-y-3">

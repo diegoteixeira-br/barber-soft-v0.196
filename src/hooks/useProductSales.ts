@@ -17,6 +17,7 @@ export interface ProductSale {
   client_phone: string | null;
   appointment_id: string | null;
   created_at: string;
+  payment_method: string | null;
   product?: {
     id: string;
     name: string;
@@ -35,6 +36,7 @@ export interface ProductSaleFormData {
   client_name?: string;
   client_phone?: string;
   appointment_id?: string;
+  payment_method?: string;
 }
 
 export interface DateRange {

@@ -1,3 +1,4 @@
+import { useState } from "react";
 import { format } from "date-fns";
 import { ptBR } from "date-fns/locale";
 import { Phone, User, Scissors, Clock, DollarSign, Calendar, Edit, Trash2, CheckCircle, XCircle, Cake, UserX } from "lucide-react";
@@ -6,6 +7,7 @@ import { Button } from "@/components/ui/button";
 import { Separator } from "@/components/ui/separator";
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle, AlertDialogTrigger } from "@/components/ui/alert-dialog";
 import { StatusBadge, getNextStatus } from "./StatusBadge";
+import { PaymentMethodModal, type PaymentMethod } from "@/components/financeiro/PaymentMethodModal";
 import type { Appointment } from "@/hooks/useAppointments";
 import type { Database } from "@/integrations/supabase/types";
 
@@ -17,7 +19,7 @@ interface AppointmentDetailsModalProps {
   appointment: Appointment | null;
   onEdit: () => void;
   onDelete: () => void;
-  onStatusChange: (status: AppointmentStatus) => void;
+  onStatusChange: (status: AppointmentStatus, paymentMethod?: string) => void;
   onNoShow?: () => void;
   isLoading?: boolean;
 }
@@ -32,12 +34,24 @@ export function AppointmentDetailsModal({
   onNoShow,
   isLoading,
 }: AppointmentDetailsModalProps) {
+  const [isPaymentModalOpen, setIsPaymentModalOpen] = useState(false);
+  
   if (!appointment) return null;
 
   const startTime = new Date(appointment.start_time);
   const endTime = new Date(appointment.end_time);
   const barberColor = appointment.barber?.calendar_color || "#FF6B00";
   const nextStatus = getNextStatus(appointment.status);
+
+  const handleFinalizar = () => {
+    // Open payment method modal instead of directly completing
+    setIsPaymentModalOpen(true);
+  };
+
+  const handlePaymentConfirm = (paymentMethod: PaymentMethod) => {
+    onStatusChange("completed", paymentMethod);
+    setIsPaymentModalOpen(false);
+  };
 
   const getNextStatusLabel = (status: AppointmentStatus) => {
     switch (status) {
@@ -134,14 +148,24 @@ export function AppointmentDetailsModal({
           {/* Status change buttons */}
           {appointment.status !== "completed" && appointment.status !== "cancelled" && (
             <div className="flex gap-2">
-              {nextStatus && (
+              {nextStatus === "confirmed" && (
                 <Button
                   className="flex-1"
-                  onClick={() => onStatusChange(nextStatus)}
+                  onClick={() => onStatusChange("confirmed")}
                   disabled={isLoading}
                 >
                   <CheckCircle className="h-4 w-4 mr-2" />
-                  {getNextStatusLabel(nextStatus)}
+                  Confirmar
+                </Button>
+              )}
+              {nextStatus === "completed" && (
+                <Button
+                  className="flex-1"
+                  onClick={handleFinalizar}
+                  disabled={isLoading}
+                >
+                  <CheckCircle className="h-4 w-4 mr-2" />
+                  Finalizar
                 </Button>
               )}
               {onNoShow && (
@@ -198,6 +222,15 @@ export function AppointmentDetailsModal({
           </div>
         </div>
       </DialogContent>
+
+      {/* Payment Method Modal */}
+      <PaymentMethodModal
+        open={isPaymentModalOpen}
+        onOpenChange={setIsPaymentModalOpen}
+        onConfirm={handlePaymentConfirm}
+        totalPrice={appointment.total_price}
+        isLoading={isLoading}
+      />
     </Dialog>
   );
 }

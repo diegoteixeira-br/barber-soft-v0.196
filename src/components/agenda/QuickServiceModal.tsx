@@ -44,6 +44,7 @@ const formSchema = z.object({
   schedule_later: z.boolean().default(false),
   scheduled_date: z.string().optional(),
   scheduled_time: z.string().optional(),
+  payment_method: z.string().optional(),
 }).refine((data) => {
   if (data.schedule_later) {
     return data.scheduled_date && data.scheduled_time;
@@ -52,6 +53,15 @@ const formSchema = z.object({
 }, {
   message: "Data e hora são obrigatórios para agendamento",
   path: ["scheduled_date"],
+}).refine((data) => {
+  // Payment method is required only when NOT scheduling for later
+  if (!data.schedule_later) {
+    return !!data.payment_method;
+  }
+  return true;
+}, {
+  message: "Forma de pagamento é obrigatória",
+  path: ["payment_method"],
 });
 
 type FormData = z.infer<typeof formSchema>;
@@ -86,6 +96,7 @@ export function QuickServiceModal({
       schedule_later: false,
       scheduled_date: "",
       scheduled_time: "",
+      payment_method: "",
     },
   });
 
@@ -129,6 +140,7 @@ export function QuickServiceModal({
         schedule_later: false,
         scheduled_date: today,
         scheduled_time: now,
+        payment_method: "",
       });
     }
   }, [open, form, activeBarbers]);
@@ -268,6 +280,33 @@ export function QuickServiceModal({
                 </FormItem>
               )}
             />
+
+            {/* Payment Method - Only show when NOT scheduling for later */}
+            {!scheduleLater && (
+              <FormField
+                control={form.control}
+                name="payment_method"
+                render={({ field }) => (
+                  <FormItem>
+                    <FormLabel>Forma de Pagamento *</FormLabel>
+                    <Select onValueChange={field.onChange} value={field.value}>
+                      <FormControl>
+                        <SelectTrigger>
+                          <SelectValue placeholder="Selecione a forma de pagamento" />
+                        </SelectTrigger>
+                      </FormControl>
+                      <SelectContent>
+                        <SelectItem value="cash">💵 Dinheiro</SelectItem>
+                        <SelectItem value="pix">📱 PIX</SelectItem>
+                        <SelectItem value="debit_card">💳 Débito</SelectItem>
+                        <SelectItem value="credit_card">💳 Crédito</SelectItem>
+                      </SelectContent>
+                    </Select>
+                    <FormMessage />
+                  </FormItem>
+                )}
+              />
+            )}
 
             {/* Toggle para agendar */}
             <div className="flex items-center justify-between rounded-lg border p-4">
