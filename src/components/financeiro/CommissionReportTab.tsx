@@ -176,7 +176,7 @@ export function CommissionReportTab() {
       </div>
 
       {/* Filters */}
-      <div className="flex flex-wrap gap-4 p-4 rounded-lg bg-muted/30 border border-border">
+      <div className="flex flex-wrap items-end gap-4 p-4 rounded-lg bg-muted/30 border border-border">
         <div className="space-y-2">
           <Label>Período</Label>
           <Tabs value={periodType} onValueChange={(v) => setPeriodType(v as PeriodType)}>
@@ -188,6 +188,13 @@ export function CommissionReportTab() {
             </TabsList>
           </Tabs>
         </div>
+
+        {periodType === "custom" && (
+          <DateRangePicker
+            dateRange={customDateRange}
+            onDateRangeChange={setCustomDateRange}
+          />
+        )}
 
         {periodType === "month" && (
           <>
@@ -229,16 +236,6 @@ export function CommissionReportTab() {
               </Select>
             </div>
           </>
-        )}
-
-        {periodType === "custom" && (
-          <div className="space-y-2">
-            <Label>Intervalo</Label>
-            <DateRangePicker
-              dateRange={customDateRange}
-              onDateRangeChange={setCustomDateRange}
-            />
-          </div>
         )}
 
         <div className="space-y-2">

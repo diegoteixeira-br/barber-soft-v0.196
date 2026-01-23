@@ -1,11 +1,13 @@
 import { useState, useMemo } from "react";
-import { format } from "date-fns";
+import { format, startOfMonth, endOfMonth } from "date-fns";
 import { ptBR } from "date-fns/locale";
 import { Gift, Calendar, User, Scissors, Phone, FileText } from "lucide-react";
 import { useFinancialData, getMonthRange, getDateRanges } from "@/hooks/useFinancialData";
 import { useBarbers } from "@/hooks/useBarbers";
 import { useCurrentUnit } from "@/contexts/UnitContext";
 import { RevenueCard } from "./RevenueCard";
+import { DateRangePicker } from "./DateRangePicker";
+import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import {
   Select,
   SelectContent,
@@ -25,6 +27,8 @@ import {
 import { Badge } from "@/components/ui/badge";
 import { Skeleton } from "@/components/ui/skeleton";
 
+type PeriodType = "day" | "week" | "month" | "custom";
+
 export function CourtesyReportTab() {
   const { currentUnitId } = useCurrentUnit();
   const { barbers } = useBarbers(currentUnitId);
@@ -32,14 +36,30 @@ export function CourtesyReportTab() {
   const currentYear = new Date().getFullYear();
   const currentMonth = new Date().getMonth();
 
+  const [periodType, setPeriodType] = useState<PeriodType>("month");
   const [selectedYear, setSelectedYear] = useState(currentYear);
   const [selectedMonth, setSelectedMonth] = useState(currentMonth);
   const [selectedBarberId, setSelectedBarberId] = useState<string | null>(null);
+  const [customDateRange, setCustomDateRange] = useState({
+    start: startOfMonth(new Date()),
+    end: endOfMonth(new Date()),
+  });
 
-  const dateRange = useMemo(
-    () => getMonthRange(selectedYear, selectedMonth),
-    [selectedYear, selectedMonth]
-  );
+  const dateRanges = getDateRanges();
+
+  const dateRange = useMemo(() => {
+    switch (periodType) {
+      case "day":
+        return dateRanges.today;
+      case "week":
+        return dateRanges.week;
+      case "custom":
+        return customDateRange;
+      case "month":
+      default:
+        return getMonthRange(selectedYear, selectedMonth);
+    }
+  }, [periodType, selectedYear, selectedMonth, dateRanges.today, dateRanges.week, customDateRange]);
 
   const { appointments, isLoading } = useFinancialData(dateRange, selectedBarberId);
 
@@ -112,44 +132,67 @@ export function CourtesyReportTab() {
       </div>
 
       {/* Filters */}
-      <div className="flex flex-wrap gap-4 p-4 rounded-lg bg-muted/30 border border-border">
+      <div className="flex flex-wrap items-end gap-4 p-4 rounded-lg bg-muted/30 border border-border">
         <div className="space-y-2">
-          <Label>Mês</Label>
-          <Select
-            value={String(selectedMonth)}
-            onValueChange={(v) => setSelectedMonth(Number(v))}
-          >
-            <SelectTrigger className="w-[160px]">
-              <SelectValue />
-            </SelectTrigger>
-            <SelectContent>
-              {months.map((month) => (
-                <SelectItem key={month.value} value={String(month.value)}>
-                  {month.label.charAt(0).toUpperCase() + month.label.slice(1)}
-                </SelectItem>
-              ))}
-            </SelectContent>
-          </Select>
+          <Label>Período</Label>
+          <Tabs value={periodType} onValueChange={(v) => setPeriodType(v as PeriodType)}>
+            <TabsList className="bg-muted">
+              <TabsTrigger value="day">Hoje</TabsTrigger>
+              <TabsTrigger value="week">Semana</TabsTrigger>
+              <TabsTrigger value="month">Mês</TabsTrigger>
+              <TabsTrigger value="custom">Personalizado</TabsTrigger>
+            </TabsList>
+          </Tabs>
         </div>
 
-        <div className="space-y-2">
-          <Label>Ano</Label>
-          <Select
-            value={String(selectedYear)}
-            onValueChange={(v) => setSelectedYear(Number(v))}
-          >
-            <SelectTrigger className="w-[100px]">
-              <SelectValue />
-            </SelectTrigger>
-            <SelectContent>
-              {years.map((year) => (
-                <SelectItem key={year} value={String(year)}>
-                  {year}
-                </SelectItem>
-              ))}
-            </SelectContent>
-          </Select>
-        </div>
+        {periodType === "custom" && (
+          <DateRangePicker
+            dateRange={customDateRange}
+            onDateRangeChange={setCustomDateRange}
+          />
+        )}
+
+        {periodType === "month" && (
+          <>
+            <div className="space-y-2">
+              <Label>Mês</Label>
+              <Select
+                value={String(selectedMonth)}
+                onValueChange={(v) => setSelectedMonth(Number(v))}
+              >
+                <SelectTrigger className="w-[160px]">
+                  <SelectValue />
+                </SelectTrigger>
+                <SelectContent>
+                  {months.map((month) => (
+                    <SelectItem key={month.value} value={String(month.value)}>
+                      {month.label.charAt(0).toUpperCase() + month.label.slice(1)}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
+
+            <div className="space-y-2">
+              <Label>Ano</Label>
+              <Select
+                value={String(selectedYear)}
+                onValueChange={(v) => setSelectedYear(Number(v))}
+              >
+                <SelectTrigger className="w-[100px]">
+                  <SelectValue />
+                </SelectTrigger>
+                <SelectContent>
+                  {years.map((year) => (
+                    <SelectItem key={year} value={String(year)}>
+                      {year}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
+          </>
+        )}
 
         <div className="space-y-2">
           <Label>Barbeiro</Label>
@@ -177,7 +220,7 @@ export function CourtesyReportTab() {
         <RevenueCard
           title="Total de Cortesias"
           value={String(stats.total)}
-          subtitle={`${format(new Date(selectedYear, selectedMonth), "MMMM/yyyy", { locale: ptBR })}`}
+          subtitle={periodType === "day" ? "Hoje" : periodType === "week" ? "Esta semana" : periodType === "custom" ? "Período selecionado" : `${format(new Date(selectedYear, selectedMonth), "MMMM/yyyy", { locale: ptBR })}`}
           icon={Gift}
           variant="default"
         />
