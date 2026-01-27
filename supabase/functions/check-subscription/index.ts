@@ -47,10 +47,10 @@ serve(async (req) => {
       .from("companies")
       .select("id, stripe_customer_id, stripe_subscription_id, plan_status, plan_type, trial_ends_at, is_partner, partner_ends_at")
       .eq("owner_user_id", user.id)
-      .single();
+      .maybeSingle();
 
-    if (companyError) {
-      logStep("No company found", { error: companyError.message });
+    if (companyError || !company) {
+      logStep("No company found", { error: companyError?.message });
       return new Response(JSON.stringify({ 
         subscribed: false, 
         plan_status: null,
@@ -137,12 +137,11 @@ serve(async (req) => {
 
     const stripe = new Stripe(stripeKey, { apiVersion: "2025-08-27.basil" });
 
-    // Check active subscriptions
+    // Check active subscriptions - don't expand nested objects to avoid Stripe limits
     const subscriptions = await stripe.subscriptions.list({
       customer: company.stripe_customer_id,
       status: "active",
       limit: 1,
-      expand: ["data.items.data.price.product"]
     });
 
     const hasActiveSub = subscriptions.data.length > 0;
@@ -158,16 +157,20 @@ serve(async (req) => {
       subscriptionEnd = new Date(subscription.current_period_end * 1000).toISOString();
       cancelAtPeriodEnd = subscription.cancel_at_period_end;
       
-      // Get price and product info
-      const priceItem = subscription.items.data[0]?.price;
-      if (priceItem) {
-        priceAmount = priceItem.unit_amount ? priceItem.unit_amount / 100 : null;
-        priceInterval = priceItem.recurring?.interval || null;
+      // Get price info from the subscription item
+      const priceId = subscription.items.data[0]?.price?.id;
+      if (priceId) {
+        // Fetch price with product expanded separately to avoid nesting limits
+        const price = await stripe.prices.retrieve(priceId, {
+          expand: ["product"]
+        });
+        
+        priceAmount = price.unit_amount ? price.unit_amount / 100 : null;
+        priceInterval = price.recurring?.interval || null;
         
         // Get product name
-        const product = priceItem.product;
-        if (product && typeof product === 'object' && 'name' in product) {
-          productName = product.name as string;
+        if (price.product && typeof price.product === 'object' && 'name' in price.product) {
+          productName = price.product.name as string;
         }
       }
       
@@ -205,7 +208,6 @@ serve(async (req) => {
       const cancelledSubs = await stripe.subscriptions.list({
         customer: company.stripe_customer_id,
         limit: 1,
-        expand: ["data.items.data.price.product"]
       });
       
       if (cancelledSubs.data.length > 0) {
@@ -214,13 +216,18 @@ serve(async (req) => {
           subscriptionEnd = new Date(sub.current_period_end * 1000).toISOString();
           cancelAtPeriodEnd = true;
           
-          const priceItem = sub.items.data[0]?.price;
-          if (priceItem) {
-            priceAmount = priceItem.unit_amount ? priceItem.unit_amount / 100 : null;
-            priceInterval = priceItem.recurring?.interval || null;
-            const product = priceItem.product;
-            if (product && typeof product === 'object' && 'name' in product) {
-              productName = product.name as string;
+          // Fetch price details separately
+          const priceId = sub.items.data[0]?.price?.id;
+          if (priceId) {
+            const price = await stripe.prices.retrieve(priceId, {
+              expand: ["product"]
+            });
+            
+            priceAmount = price.unit_amount ? price.unit_amount / 100 : null;
+            priceInterval = price.recurring?.interval || null;
+            
+            if (price.product && typeof price.product === 'object' && 'name' in price.product) {
+              productName = price.product.name as string;
             }
           }
           
