@@ -1,79 +1,101 @@
 
-# Ajustar Mensagem Inicial do Jackson - Mais Genérica
 
-## Problema Identificado
+# Programa de Fidelidade Configuravel - Valor Minimo
 
-A mensagem inicial do Jackson lista funcionalidades específicas:
-- Atendimento Rápido
-- WhatsApp
-- Agenda
-- Financeiro
-- Marketing
+## Resumo
 
-Isso passa a impressão de que o suporte é limitado a esses tópicos.
+Adicionar uma configuracao para o dono da barbearia definir o valor minimo que um servico precisa ter para contar como "corte" no programa de fidelidade. Atualmente estava fixo em R$30, mas cada barbearia pode ter precos diferentes.
 
-## Solução
+## Alteracoes
 
-Modificar o `SYSTEM_PROMPT` na edge function para que a primeira mensagem seja mais simples e genérica, deixando claro que o Jackson pode ajudar com **qualquer dúvida** sobre o sistema.
+### 1. Banco de Dados
 
-## Nova Mensagem Inicial (Sugerida)
+Adicionar nova coluna na tabela `business_settings`:
 
-```text
-Olá! 👋 Sou o Jackson, seu assistente virtual do BarberSoft.
+| Coluna | Tipo | Default | Descricao |
+|--------|------|---------|-----------|
+| `fidelity_min_value` | numeric | 30.00 | Valor minimo do servico para contar como corte |
 
-Estou aqui para te ajudar com qualquer dúvida sobre o sistema!
+### 2. Interface de Configuracao
 
-Só me conta o que você precisa. 💈
-```
-
-Ou ainda mais curta:
+Na aba "Fidelidade" (`FidelityTab.tsx`), adicionar novo campo:
 
 ```text
-Olá! 👋 Sou o Jackson, assistente do BarberSoft.
-
-Me conta sua dúvida - posso ajudar com qualquer funcionalidade do sistema!
++------------------------------------------+
+|  Programa de Fidelidade                  |
++------------------------------------------+
+|  [x] Ativar programa de fidelidade       |
+|                                          |
+|  Cortes para ganhar cortesia: [10]       |
+|                                          |
+|  Valor minimo do servico: R$ [30,00]  <-- NOVO
+|  Servicos abaixo desse valor nao contam  |
+|                                          |
+|  [!] Como funciona:                      |
+|  - Servicos acima de R$30 contam         |
+|  - Cortesias NAO contam                  |
+|  - ...                                   |
++------------------------------------------+
 ```
 
-## Alteração Técnica
+### 3. Trigger do Banco de Dados
 
-### Arquivo: `supabase/functions/support-chat/index.ts`
+Atualizar a funcao `sync_client_on_appointment_complete` para:
+- Buscar o valor minimo configurado (`fidelity_min_value`)
+- Verificar se `total_price >= fidelity_min_value`
+- Excluir cortesias da contagem
 
-Modificar a seção "Exemplos de Perguntas que Posso Responder" do SYSTEM_PROMPT:
-
-**De:**
+```text
+Fluxo de decisao:
+  Agendamento finalizado
+         |
+         v
+  Valor >= valor_minimo_configurado?
+         |
+     [Sim]
+         v
+  E cortesia?
+         |
+     [Nao]
+         v
+  Incrementar contador de fidelidade
 ```
-## Exemplos de Perguntas que Posso Responder
-- "Como registro um corte fora do horário?"
-- "Como conecto o WhatsApp?"
-- ...
+
+## Arquivos a Modificar
+
+| Arquivo | Alteracao |
+|---------|-----------|
+| Nova migracao SQL | Adicionar coluna `fidelity_min_value` |
+| Nova migracao SQL | Atualizar trigger com regras de validacao |
+| `src/hooks/useBusinessSettings.ts` | Adicionar campo no tipo |
+| `src/components/configuracoes/FidelityTab.tsx` | Campo para configurar valor minimo |
+
+## Detalhes Tecnicos
+
+### Migracao 1 - Nova Coluna
+```sql
+ALTER TABLE public.business_settings
+ADD COLUMN fidelity_min_value numeric DEFAULT 30.00;
 ```
 
-**Para:**
-```
-## Primeira Interação
-Na primeira mensagem, seja breve e acolhedor. NÃO liste funcionalidades específicas.
-Apenas diga que está disponível para ajudar com qualquer dúvida sobre o sistema.
+### Migracao 2 - Trigger Atualizado
+O trigger buscara o `fidelity_min_value` das configuracoes e aplicara:
+- `NEW.total_price >= fidelity_min_value`
+- `NEW.payment_method NOT IN ('courtesy', 'fidelity_courtesy')`
 
-Exemplo de primeira mensagem:
-"Olá! 👋 Sou o Jackson, seu assistente do BarberSoft. Me conta sua dúvida - posso ajudar com qualquer funcionalidade do sistema!"
-
-## Exemplos de Perguntas que Você Sabe Responder (use apenas quando relevante)
-- Como usar cada funcionalidade
-- Como resolver problemas
-- Dúvidas sobre configurações
-- Qualquer aspecto do BarberSoft
+### Interface TypeScript
+```typescript
+interface BusinessSettings {
+  // ... campos existentes
+  fidelity_min_value: number | null;
+}
 ```
 
 ## Resultado Esperado
 
-| Antes | Depois |
-|-------|--------|
-| Lista 5 funcionalidades específicas | Mensagem genérica e acolhedora |
-| Parece suporte limitado | Parece suporte completo |
-| Texto longo | Texto curto e direto |
+Apos implementacao:
+- Dono da barbearia pode definir o valor minimo (ex: R$25, R$35, R$50)
+- A interface mostra claramente qual valor esta configurado
+- O trigger usa esse valor para decidir se o corte conta
+- Cortesias nunca contam, independente do valor
 
-## Arquivo a Modificar
-
-| Arquivo | Alteração |
-|---------|-----------|
-| `supabase/functions/support-chat/index.ts` | Ajustar SYSTEM_PROMPT para mensagem inicial genérica |
