@@ -52,6 +52,8 @@ export function SupportChatWidget({ isOpen, onClose }: SupportChatWidgetProps) {
     "Como funciona o programa de fidelidade?",
     "Como vejo as comissões?",
     "Como cadastro um novo barbeiro?",
+    "Como cadastro dependentes de um cliente?",
+    "Como configuro automações de marketing?",
   ];
 
   const handleSuggestionClick = (question: string) => {
