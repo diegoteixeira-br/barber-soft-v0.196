@@ -411,9 +411,7 @@ export default function Assinatura() {
                 <div className="text-center py-8 text-muted-foreground">
                   <AlertTriangle className="h-12 w-12 mx-auto mb-4 opacity-50" />
                   <p>Nenhum plano ativo</p>
-                  <Button className="mt-4" onClick={() => window.location.href = "/escolher-plano"}>
-                    Escolher um Plano
-                  </Button>
+                  <p className="text-sm mt-2">Escolha um plano ao lado para começar.</p>
                 </div>
               )}
             </CardContent>
