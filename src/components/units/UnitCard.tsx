@@ -23,6 +23,28 @@ interface UnitCardProps {
 
 type WhatsAppStatus = 'disconnected' | 'connected' | 'checking';
 
+const formatBrazilianPhone = (phone: string): string => {
+  // Remove all non-numeric characters
+  const digits = phone.replace(/\D/g, '');
+  
+  // Handle different formats
+  if (digits.length === 13 && digits.startsWith('55')) {
+    // +55 XX XXXXX-XXXX
+    return `(${digits.slice(2, 4)}) ${digits.slice(4, 9)}-${digits.slice(9)}`;
+  } else if (digits.length === 12 && digits.startsWith('55')) {
+    // +55 XX XXXX-XXXX
+    return `(${digits.slice(2, 4)}) ${digits.slice(4, 8)}-${digits.slice(8)}`;
+  } else if (digits.length === 11) {
+    // XX XXXXX-XXXX
+    return `(${digits.slice(0, 2)}) ${digits.slice(2, 7)}-${digits.slice(7)}`;
+  } else if (digits.length === 10) {
+    // XX XXXX-XXXX
+    return `(${digits.slice(0, 2)}) ${digits.slice(2, 6)}-${digits.slice(6)}`;
+  }
+  
+  return phone; // Return original if format not recognized
+};
+
 export function UnitCard({ unit, onEdit, onDelete, onConfigureWhatsApp, onSetHeadquarters }: UnitCardProps) {
   const [whatsappStatus, setWhatsappStatus] = useState<WhatsAppStatus>('checking');
 
@@ -163,7 +185,7 @@ export function UnitCard({ unit, onEdit, onDelete, onConfigureWhatsApp, onSetHea
               onClick={() => onConfigureWhatsApp(unit)}
             >
               <MessageCircle className="mr-2 h-4 w-4" />
-              {unit.whatsapp_phone ? `Conectado: ${unit.whatsapp_phone}` : 'WhatsApp Conectado'}
+              {unit.whatsapp_phone ? `Conectado: ${formatBrazilianPhone(unit.whatsapp_phone)}` : 'WhatsApp Conectado'}
             </Button>
           ) : (
             <Button 
