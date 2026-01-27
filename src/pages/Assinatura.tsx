@@ -571,8 +571,8 @@ export default function Assinatura() {
                     </AlertDialog>
                   )}
 
-                  {/* Choose Plan Button - Visible for trial/cancelled/no plan */}
-                  {(!hasStripeCustomer || status?.plan_status === "trial" || status?.plan_status === "cancelled" || !status?.plan_status) && (
+                  {/* Choose Plan Button - Only show here if there's no plan in the current plan card */}
+                  {hasStripeCustomer && (status?.plan_status === "trial" || status?.plan_status === "cancelled") && (
                     <Button 
                       className="w-full justify-start gap-2"
                       onClick={() => window.location.href = "/escolher-plano"}

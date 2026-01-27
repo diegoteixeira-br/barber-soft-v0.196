@@ -1,12 +1,11 @@
 import { useState, useEffect } from "react";
 import { useNavigate, Link } from "react-router-dom";
-import { Scissors, Check, Sparkles, Loader2, Shield } from "lucide-react";
+import { Scissors, Check, Sparkles, Loader2, Shield, ArrowLeft } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
 import { useSubscription } from "@/hooks/useSubscription";
 import { useToast } from "@/hooks/use-toast";
-
 const plans = [
   {
     id: "inicial",
@@ -104,8 +103,32 @@ export default function EscolherPlano() {
   return (
     <div className="min-h-screen bg-background py-8 px-4">
       <div className="max-w-6xl mx-auto">
+        {/* Back Button */}
+        <div className="mb-6">
+          {isAuthenticated ? (
+            <Button 
+              variant="ghost" 
+              onClick={() => navigate("/assinatura")}
+              className="gap-2 text-muted-foreground hover:text-foreground"
+            >
+              <ArrowLeft className="h-4 w-4" />
+              Voltar para Minha Conta
+            </Button>
+          ) : (
+            <a href="/">
+              <Button 
+                variant="ghost" 
+                className="gap-2 text-muted-foreground hover:text-foreground"
+              >
+                <ArrowLeft className="h-4 w-4" />
+                Voltar para Página Inicial
+              </Button>
+            </a>
+          )}
+        </div>
+
         {/* Logo */}
-        <Link to="/" className="mb-8 flex flex-col items-center group">
+        <Link to={isAuthenticated ? "/assinatura" : "/"} className="mb-8 flex flex-col items-center group">
           <div className="mb-4 flex h-16 w-16 items-center justify-center rounded-2xl bg-primary glow-gold group-hover:scale-105 transition-transform">
             <Scissors className="h-8 w-8 text-primary-foreground" />
           </div>
