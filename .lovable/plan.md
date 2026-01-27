@@ -1,81 +1,79 @@
 
-# Mover Chat de Suporte para o Menu Lateral
+# Ajustar Mensagem Inicial do Jackson - Mais Genérica
 
-## O Que Será Feito
+## Problema Identificado
 
-Remover o botão flutuante do chat e adicionar um item no menu principal do sidebar, logo abaixo de "Configurações".
+A mensagem inicial do Jackson lista funcionalidades específicas:
+- Atendimento Rápido
+- WhatsApp
+- Agenda
+- Financeiro
+- Marketing
 
-## Mudanças Planejadas
+Isso passa a impressão de que o suporte é limitado a esses tópicos.
 
-### 1. AppSidebar.tsx
+## Solução
 
-Adicionar novo item no menu:
+Modificar o `SYSTEM_PROMPT` na edge function para que a primeira mensagem seja mais simples e genérica, deixando claro que o Jackson pode ajudar com **qualquer dúvida** sobre o sistema.
+
+## Nova Mensagem Inicial (Sugerida)
 
 ```text
-Antes:
-  - Dashboard
-  - Agenda
-  - ...
-  - Unidades
-  - Configurações  ← último item
+Olá! 👋 Sou o Jackson, seu assistente virtual do BarberSoft.
 
-Depois:
-  - Dashboard
-  - Agenda
-  - ...
-  - Unidades
-  - Configurações
-  - Suporte 24h    ← novo item (ícone: MessageCircle ou HeadphonesIcon)
+Estou aqui para te ajudar com qualquer dúvida sobre o sistema!
+
+Só me conta o que você precisa. 💈
 ```
 
-O item de suporte vai:
-- Ter ícone de headphones/chat
-- Exibir "Suporte 24h" como texto
-- Ao clicar, abrir o modal/drawer do chat (não navegar para outra página)
+Ou ainda mais curta:
 
-### 2. SupportChatWidget.tsx
+```text
+Olá! 👋 Sou o Jackson, assistente do BarberSoft.
 
-Modificar para:
-- Remover o botão flutuante completamente
-- Receber uma prop `isOpen` controlada pelo sidebar
-- Exportar função para controlar abertura/fechamento
+Me conta sua dúvida - posso ajudar com qualquer funcionalidade do sistema!
+```
 
-### 3. DashboardLayout.tsx
+## Alteração Técnica
 
-Ajustar para:
-- Gerenciar estado de abertura do chat
-- Passar estado para o AppSidebar e SupportChatWidget
+### Arquivo: `supabase/functions/support-chat/index.ts`
 
-## Arquivos a Modificar
+Modificar a seção "Exemplos de Perguntas que Posso Responder" do SYSTEM_PROMPT:
+
+**De:**
+```
+## Exemplos de Perguntas que Posso Responder
+- "Como registro um corte fora do horário?"
+- "Como conecto o WhatsApp?"
+- ...
+```
+
+**Para:**
+```
+## Primeira Interação
+Na primeira mensagem, seja breve e acolhedor. NÃO liste funcionalidades específicas.
+Apenas diga que está disponível para ajudar com qualquer dúvida sobre o sistema.
+
+Exemplo de primeira mensagem:
+"Olá! 👋 Sou o Jackson, seu assistente do BarberSoft. Me conta sua dúvida - posso ajudar com qualquer funcionalidade do sistema!"
+
+## Exemplos de Perguntas que Você Sabe Responder (use apenas quando relevante)
+- Como usar cada funcionalidade
+- Como resolver problemas
+- Dúvidas sobre configurações
+- Qualquer aspecto do BarberSoft
+```
+
+## Resultado Esperado
+
+| Antes | Depois |
+|-------|--------|
+| Lista 5 funcionalidades específicas | Mensagem genérica e acolhedora |
+| Parece suporte limitado | Parece suporte completo |
+| Texto longo | Texto curto e direto |
+
+## Arquivo a Modificar
 
 | Arquivo | Alteração |
 |---------|-----------|
-| `src/components/layout/AppSidebar.tsx` | Adicionar item "Suporte 24h" no menu, com onClick para abrir chat |
-| `src/components/support/SupportChatWidget.tsx` | Remover botão flutuante, receber props de controle |
-| `src/components/layout/DashboardLayout.tsx` | Gerenciar estado global do chat |
-
-## Fluxo Técnico
-
-```text
-DashboardLayout
-  ├── isChatOpen state
-  ├── AppSidebar (recebe onOpenChat)
-  │     └── Item "Suporte 24h" → onClick chama onOpenChat()
-  └── SupportChatWidget (recebe isOpen, onClose)
-        └── Exibe chat apenas quando isOpen=true
-```
-
-## Visual no Menu
-
-O item terá a mesma aparência dos outros itens do menu:
-- Ícone `MessageCircle` ou `HeadphonesIcon` do lucide-react
-- Texto "Suporte 24h"
-- Hover com fundo secundário
-- Destaque dourado quando chat está aberto
-
-## Resultado
-
-- Menu lateral limpo e organizado
-- Chat acessível de forma intuitiva no mesmo local que outras ferramentas
-- Nenhum botão flutuante cobrindo conteúdo
-- Experiência consistente com o resto do sistema
+| `supabase/functions/support-chat/index.ts` | Ajustar SYSTEM_PROMPT para mensagem inicial genérica |
