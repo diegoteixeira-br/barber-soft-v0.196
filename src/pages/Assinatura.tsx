@@ -1,4 +1,5 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
+import { useSearchParams } from "react-router-dom";
 import { DashboardLayout } from "@/components/layout/DashboardLayout";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -14,7 +15,6 @@ import {
   Crown, 
   CreditCard, 
   Calendar, 
-  ArrowUpCircle, 
   XCircle,
   CheckCircle,
   Clock,
@@ -26,7 +26,9 @@ import {
   Infinity,
   Shield,
   Receipt,
-  AlertCircle
+  AlertCircle,
+  Check,
+  Sparkles
 } from "lucide-react";
 import {
   AlertDialog,
@@ -70,6 +72,60 @@ const planDetails = {
   },
 };
 
+const plans = [
+  {
+    id: "inicial",
+    name: "Inicial",
+    monthlyPrice: 99,
+    annualPrice: 79,
+    annualTotal: 948,
+    description: "Perfeito para barbearias iniciantes",
+    features: [
+      "1 Unidade",
+      "Até 5 Profissionais",
+      "Agenda completa",
+      "Dashboard financeiro",
+      "Gestão de clientes",
+      "Controle de serviços",
+    ],
+    highlighted: false,
+  },
+  {
+    id: "profissional",
+    name: "Profissional",
+    monthlyPrice: 199,
+    annualPrice: 159,
+    annualTotal: 1908,
+    description: "O mais escolhido pelos nossos clientes",
+    features: [
+      "1 Unidade",
+      "Até 10 Profissionais",
+      "Integração WhatsApp",
+      "Jackson IA (Atendente Virtual)",
+      "Marketing e automações",
+      "Comissões automáticas",
+      "Controle de estoque",
+      "Relatórios avançados",
+    ],
+    highlighted: true,
+  },
+  {
+    id: "franquias",
+    name: "Franquias",
+    monthlyPrice: 499,
+    annualPrice: 399,
+    annualTotal: 4788,
+    description: "Para redes com múltiplas unidades",
+    features: [
+      "Unidades ilimitadas",
+      "Profissionais ilimitados",
+      "Tudo do Profissional",
+      "Dashboard consolidado de todas unidades",
+    ],
+    highlighted: false,
+  },
+];
+
 const getStatusBadge = (status: string | null, isSuperAdmin: boolean = false, isCancelling: boolean = false) => {
   if (isSuperAdmin) {
     return <Badge className="bg-purple-500/20 text-purple-400 border-purple-500/30">Vitalício</Badge>;
@@ -94,12 +150,14 @@ const getStatusBadge = (status: string | null, isSuperAdmin: boolean = false, is
 };
 
 export default function Assinatura() {
+  const [searchParams] = useSearchParams();
   const { 
     status, 
     isLoading, 
     isPortalLoading,
     openCustomerPortal, 
     startCheckout, 
+    checkSubscription,
     isTrialing, 
     isPartner, 
     daysRemaining,
@@ -110,9 +168,24 @@ export default function Assinatura() {
   const { toast } = useToast();
   const [isUpgrading, setIsUpgrading] = useState<string | null>(null);
   const [isCancelDialogOpen, setIsCancelDialogOpen] = useState(false);
+  const [isAnnual, setIsAnnual] = useState(false);
 
   const currentPlan = status?.plan_type ? planDetails[status.plan_type] : null;
   const PlanIcon = isSuperAdmin ? Shield : (currentPlan?.icon || Crown);
+
+  // Check for successful checkout and refresh subscription
+  useEffect(() => {
+    const checkoutStatus = searchParams.get("checkout");
+    if (checkoutStatus === "success") {
+      toast({
+        title: "Pagamento realizado!",
+        description: "Sua assinatura foi ativada com sucesso.",
+      });
+      checkSubscription();
+      // Clear the URL param
+      window.history.replaceState({}, document.title, "/assinatura");
+    }
+  }, [searchParams, toast, checkSubscription]);
 
   const handleOpenPortal = async () => {
     const url = await openCustomerPortal();
@@ -135,10 +208,21 @@ export default function Assinatura() {
     setIsCancelDialogOpen(false);
   };
 
-  const handleUpgrade = async (plan: string) => {
-    setIsUpgrading(plan);
-    await startCheckout(plan, "monthly");
-    setIsUpgrading(null);
+  const handleSelectPlan = async (planId: string) => {
+    setIsUpgrading(planId);
+    try {
+      const billing = isAnnual ? "annual" : "monthly";
+      await startCheckout(planId, billing);
+    } catch (error) {
+      console.error("Error starting checkout:", error);
+      toast({
+        title: "Erro",
+        description: "Não foi possível iniciar o checkout. Tente novamente.",
+        variant: "destructive",
+      });
+    } finally {
+      setIsUpgrading(null);
+    }
   };
 
   const trialProgress = isTrialing && daysRemaining !== null 
@@ -164,6 +248,13 @@ export default function Assinatura() {
     }
     return null;
   };
+
+  // Check if should show plan selection (no active subscription)
+  const shouldShowPlanSelection = !isSuperAdmin && 
+    (status?.plan_status === "trial" || 
+     status?.plan_status === "cancelled" || 
+     status?.plan_status === "overdue" ||
+     !status?.plan_status);
 
   if (isLoading || isSuperAdminLoading) {
     return (
@@ -301,124 +392,259 @@ export default function Assinatura() {
           </Card>
         )}
 
-        <div className="grid gap-6 md:grid-cols-2">
-          {/* Current Plan Card */}
-          <Card>
-            <CardHeader>
-              <div className="flex items-center justify-between">
-                <CardTitle className="flex items-center gap-2">
-                  <PlanIcon className={`h-5 w-5 ${isSuperAdmin ? 'text-purple-500' : (currentPlan?.color || 'text-gold')}`} />
-                  Plano Atual
-                </CardTitle>
-                {getStatusBadge(status?.plan_status, isSuperAdmin, isCancelling)}
-              </div>
-              <CardDescription>Detalhes da sua assinatura</CardDescription>
-            </CardHeader>
-            <CardContent className="space-y-4">
-              {isSuperAdmin ? (
-                <>
-                  <div className="p-4 rounded-lg bg-purple-500/10">
-                    <div className="flex items-center justify-between">
-                      <div>
-                        <h3 className="text-xl font-bold text-purple-400">
-                          Super Admin
-                        </h3>
-                        <p className="text-sm text-muted-foreground">
-                          Acesso Vitalício
-                        </p>
-                      </div>
-                      <Shield className="h-10 w-10 text-purple-400 opacity-50" />
-                    </div>
-                  </div>
-                  
-                  <div className="space-y-2">
-                    <p className="text-sm font-medium">Recursos inclusos:</p>
-                    <ul className="space-y-1">
-                      <li className="flex items-center gap-2 text-sm text-muted-foreground">
-                        <CheckCircle className="h-4 w-4 text-green-500" />
-                        Todas as funcionalidades
-                      </li>
-                      <li className="flex items-center gap-2 text-sm text-muted-foreground">
-                        <CheckCircle className="h-4 w-4 text-green-500" />
-                        Unidades ilimitadas
-                      </li>
-                      <li className="flex items-center gap-2 text-sm text-muted-foreground">
-                        <CheckCircle className="h-4 w-4 text-green-500" />
-                        Profissionais ilimitados
-                      </li>
-                      <li className="flex items-center gap-2 text-sm text-muted-foreground">
-                        <CheckCircle className="h-4 w-4 text-green-500" />
-                        Painel administrativo
-                      </li>
-                      <li className="flex items-center gap-2 text-sm text-muted-foreground">
-                        <CheckCircle className="h-4 w-4 text-green-500" />
-                        Sem cobrança
-                      </li>
-                    </ul>
-                  </div>
-                </>
-              ) : status?.plan_status === "active" || isCancelling ? (
-                <>
-                  <div className={`p-4 rounded-lg ${currentPlan?.bgColor || 'bg-gold/10'}`}>
-                    <div className="flex items-center justify-between">
-                      <div>
-                        <h3 className={`text-xl font-bold ${currentPlan?.color || 'text-gold'}`}>
-                          {status?.product_name || currentPlan?.name || 'Plano Ativo'}
-                        </h3>
-                        <p className="text-sm text-muted-foreground">
-                          {getPriceDisplay()}
-                        </p>
-                      </div>
-                      {currentPlan && <currentPlan.icon className={`h-10 w-10 ${currentPlan.color} opacity-50`} />}
-                    </div>
-                  </div>
+        {/* Plan Selection Section - Inline Cards */}
+        {shouldShowPlanSelection && (
+          <div className="space-y-6">
+            <div className="text-center">
+              <h2 className="text-xl font-bold text-foreground mb-2">Escolha seu plano</h2>
+              <p className="text-muted-foreground text-sm">
+                Todos os planos incluem <span className="text-gold font-semibold">7 dias grátis</span> para você testar.
+              </p>
+            </div>
 
-                  {/* Billing Info */}
-                  {status?.subscription_end && (
-                    <div className="p-3 rounded-lg bg-muted/50 space-y-2">
-                      <div className="flex items-center justify-between text-sm">
-                        <span className="text-muted-foreground flex items-center gap-2">
-                          <Calendar className="h-4 w-4" />
-                          {isCancelling ? 'Acesso até:' : 'Próxima cobrança:'}
+            {/* Billing Toggle */}
+            <div className="flex items-center justify-center gap-4">
+              <span
+                className={`text-sm font-medium transition-colors ${
+                  !isAnnual ? "text-foreground" : "text-muted-foreground"
+                }`}
+              >
+                Mensal
+              </span>
+              <button
+                onClick={() => setIsAnnual(!isAnnual)}
+                className={`relative w-14 h-7 rounded-full transition-colors duration-300 ${
+                  isAnnual ? "bg-gold" : "bg-muted"
+                }`}
+              >
+                <span
+                  className={`absolute top-1 left-1 w-5 h-5 rounded-full bg-white shadow-md transition-transform duration-300 ${
+                    isAnnual ? "translate-x-7" : "translate-x-0"
+                  }`}
+                />
+              </button>
+              <div className="flex items-center gap-2">
+                <span
+                  className={`text-sm font-medium transition-colors ${
+                    isAnnual ? "text-foreground" : "text-muted-foreground"
+                  }`}
+                >
+                  Anual
+                </span>
+                <span className="inline-flex items-center px-2 py-0.5 rounded-full bg-green-500/20 text-green-400 text-xs font-semibold">
+                  -20%
+                </span>
+              </div>
+            </div>
+
+            {/* Plans Grid */}
+            <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+              {plans.map((plan) => {
+                const currentPrice = isAnnual ? plan.annualPrice : plan.monthlyPrice;
+                const isLoadingThis = isUpgrading === plan.id;
+                const isCurrentPlan = status?.plan_type === plan.id;
+
+                return (
+                  <Card
+                    key={plan.id}
+                    className={`relative transition-all duration-300 ${
+                      plan.highlighted
+                        ? "bg-gradient-to-b from-gold/10 to-charcoal border-2 border-gold/50 shadow-lg shadow-gold/10"
+                        : isCurrentPlan
+                        ? "border-2 border-primary/50 bg-primary/5"
+                        : "bg-charcoal/50 border-border/30 hover:border-border/60"
+                    }`}
+                  >
+                    {plan.highlighted && (
+                      <div className="absolute -top-3 left-1/2 -translate-x-1/2">
+                        <span className="inline-flex items-center gap-1 px-3 py-0.5 rounded-full bg-gold text-black text-xs font-semibold">
+                          <Sparkles className="h-3 w-3" />
+                          Recomendado
                         </span>
-                        <span className="font-medium">{getNextBillingDate()}</span>
                       </div>
-                      {status?.price_amount && !isCancelling && (
+                    )}
+
+                    {isCurrentPlan && (
+                      <div className="absolute -top-3 right-4">
+                        <span className="inline-flex items-center gap-1 px-3 py-0.5 rounded-full bg-primary text-primary-foreground text-xs font-semibold">
+                          Atual
+                        </span>
+                      </div>
+                    )}
+
+                    <CardHeader className="text-center pb-3 pt-6">
+                      <CardTitle className="text-lg font-bold">{plan.name}</CardTitle>
+                      <CardDescription className="text-xs">{plan.description}</CardDescription>
+                      <div className="flex items-baseline justify-center gap-1 mt-3">
+                        <span className="text-muted-foreground text-xs">R$</span>
+                        <span className="text-3xl font-bold text-foreground">{currentPrice}</span>
+                        <span className="text-muted-foreground text-xs">/mês</span>
+                      </div>
+                      {isAnnual && (
+                        <p className="text-[10px] text-muted-foreground mt-1">
+                          cobrado R$ {plan.annualTotal}/ano
+                        </p>
+                      )}
+                    </CardHeader>
+
+                    <CardContent className="pt-0">
+                      <ul className="space-y-2 mb-4">
+                        {plan.features.map((feature, i) => (
+                          <li key={i} className="flex items-start gap-2">
+                            <Check
+                              className={`h-3.5 w-3.5 flex-shrink-0 mt-0.5 ${
+                                plan.highlighted ? "text-gold" : "text-green-500"
+                              }`}
+                            />
+                            <span className="text-xs text-foreground">{feature}</span>
+                          </li>
+                        ))}
+                      </ul>
+
+                      <Button
+                        className={`w-full ${
+                          plan.highlighted
+                            ? "bg-gold hover:bg-gold/90 text-black font-semibold"
+                            : ""
+                        }`}
+                        variant={plan.highlighted ? "default" : "outline"}
+                        onClick={() => handleSelectPlan(plan.id)}
+                        disabled={isUpgrading !== null}
+                        size="sm"
+                      >
+                        {isLoadingThis ? (
+                          <>
+                            <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                            Processando...
+                          </>
+                        ) : isCurrentPlan ? (
+                          "Renovar Plano"
+                        ) : (
+                          "Escolher Plano"
+                        )}
+                      </Button>
+                    </CardContent>
+                  </Card>
+                );
+              })}
+            </div>
+          </div>
+        )}
+
+        <div className="grid gap-6 md:grid-cols-2">
+          {/* Current Plan Card - Only show for active subscriptions */}
+          {(status?.plan_status === "active" || isSuperAdmin) && (
+            <Card>
+              <CardHeader>
+                <div className="flex items-center justify-between">
+                  <CardTitle className="flex items-center gap-2">
+                    <PlanIcon className={`h-5 w-5 ${isSuperAdmin ? 'text-purple-500' : (currentPlan?.color || 'text-gold')}`} />
+                    Plano Atual
+                  </CardTitle>
+                  {getStatusBadge(status?.plan_status, isSuperAdmin, isCancelling)}
+                </div>
+                <CardDescription>Detalhes da sua assinatura</CardDescription>
+              </CardHeader>
+              <CardContent className="space-y-4">
+                {isSuperAdmin ? (
+                  <>
+                    <div className="p-4 rounded-lg bg-purple-500/10">
+                      <div className="flex items-center justify-between">
+                        <div>
+                          <h3 className="text-xl font-bold text-purple-400">
+                            Super Admin
+                          </h3>
+                          <p className="text-sm text-muted-foreground">
+                            Acesso Vitalício
+                          </p>
+                        </div>
+                        <Shield className="h-10 w-10 text-purple-400 opacity-50" />
+                      </div>
+                    </div>
+                    
+                    <div className="space-y-2">
+                      <p className="text-sm font-medium">Recursos inclusos:</p>
+                      <ul className="space-y-1">
+                        <li className="flex items-center gap-2 text-sm text-muted-foreground">
+                          <CheckCircle className="h-4 w-4 text-green-500" />
+                          Todas as funcionalidades
+                        </li>
+                        <li className="flex items-center gap-2 text-sm text-muted-foreground">
+                          <CheckCircle className="h-4 w-4 text-green-500" />
+                          Unidades ilimitadas
+                        </li>
+                        <li className="flex items-center gap-2 text-sm text-muted-foreground">
+                          <CheckCircle className="h-4 w-4 text-green-500" />
+                          Profissionais ilimitados
+                        </li>
+                        <li className="flex items-center gap-2 text-sm text-muted-foreground">
+                          <CheckCircle className="h-4 w-4 text-green-500" />
+                          Painel administrativo
+                        </li>
+                        <li className="flex items-center gap-2 text-sm text-muted-foreground">
+                          <CheckCircle className="h-4 w-4 text-green-500" />
+                          Sem cobrança
+                        </li>
+                      </ul>
+                    </div>
+                  </>
+                ) : (
+                  <>
+                    <div className={`p-4 rounded-lg ${currentPlan?.bgColor || 'bg-gold/10'}`}>
+                      <div className="flex items-center justify-between">
+                        <div>
+                          <h3 className={`text-xl font-bold ${currentPlan?.color || 'text-gold'}`}>
+                            {status?.product_name || currentPlan?.name || 'Plano Ativo'}
+                          </h3>
+                          <p className="text-sm text-muted-foreground">
+                            {getPriceDisplay()}
+                          </p>
+                        </div>
+                        {currentPlan && <currentPlan.icon className={`h-10 w-10 ${currentPlan.color} opacity-50`} />}
+                      </div>
+                    </div>
+
+                    {/* Billing Info */}
+                    {status?.subscription_end && (
+                      <div className="p-3 rounded-lg bg-muted/50 space-y-2">
                         <div className="flex items-center justify-between text-sm">
                           <span className="text-muted-foreground flex items-center gap-2">
-                            <CreditCard className="h-4 w-4" />
-                            Valor:
+                            <Calendar className="h-4 w-4" />
+                            {isCancelling ? 'Acesso até:' : 'Próxima cobrança:'}
                           </span>
-                          <span className="font-medium">{getPriceDisplay()}</span>
+                          <span className="font-medium">{getNextBillingDate()}</span>
                         </div>
-                      )}
+                        {status?.price_amount && !isCancelling && (
+                          <div className="flex items-center justify-between text-sm">
+                            <span className="text-muted-foreground flex items-center gap-2">
+                              <CreditCard className="h-4 w-4" />
+                              Valor:
+                            </span>
+                            <span className="font-medium">{getPriceDisplay()}</span>
+                          </div>
+                        )}
+                      </div>
+                    )}
+                    
+                    <div className="space-y-2">
+                      <p className="text-sm font-medium">Recursos inclusos:</p>
+                      <ul className="space-y-1">
+                        {currentPlan?.features.map((feature, index) => (
+                          <li key={index} className="flex items-center gap-2 text-sm text-muted-foreground">
+                            <CheckCircle className="h-4 w-4 text-green-500" />
+                            {feature}
+                          </li>
+                        ))}
+                      </ul>
                     </div>
-                  )}
-                  
-                  <div className="space-y-2">
-                    <p className="text-sm font-medium">Recursos inclusos:</p>
-                    <ul className="space-y-1">
-                      {currentPlan?.features.map((feature, index) => (
-                        <li key={index} className="flex items-center gap-2 text-sm text-muted-foreground">
-                          <CheckCircle className="h-4 w-4 text-green-500" />
-                          {feature}
-                        </li>
-                      ))}
-                    </ul>
-                  </div>
-                </>
-              ) : (
-                <div className="text-center py-8 text-muted-foreground">
-                  <AlertTriangle className="h-12 w-12 mx-auto mb-4 opacity-50" />
-                  <p>Nenhum plano ativo</p>
-                  <p className="text-sm mt-2">Escolha um plano ao lado para começar.</p>
-                </div>
-              )}
-            </CardContent>
-          </Card>
+                  </>
+                )}
+              </CardContent>
+            </Card>
+          )}
 
           {/* Billing & Actions Card - Hidden for Super Admin */}
-          {!isSuperAdmin && (
+          {!isSuperAdmin && (status?.plan_status === "active" || hasStripeCustomer) && (
             <Card>
               <CardHeader>
                 <CardTitle className="flex items-center gap-2">
@@ -471,57 +697,6 @@ export default function Assinatura() {
 
                 <div className="space-y-2">
                   <p className="text-sm font-medium">Ações da Assinatura</p>
-                  
-                  {/* Upgrade Button - for active subscriptions not on highest plan */}
-                  {(status?.plan_status === "active" && status?.plan_type !== "franquias" && !isCancelling) && (
-                    <AlertDialog>
-                      <AlertDialogTrigger asChild>
-                        <Button variant="outline" className="w-full justify-start gap-2 text-green-500 hover:text-green-400 hover:bg-green-500/10">
-                          <ArrowUpCircle className="h-4 w-4" />
-                          Fazer Upgrade
-                        </Button>
-                      </AlertDialogTrigger>
-                      <AlertDialogContent>
-                        <AlertDialogHeader>
-                          <AlertDialogTitle>Fazer Upgrade de Plano</AlertDialogTitle>
-                          <AlertDialogDescription>
-                            Escolha o novo plano para fazer upgrade. Você será redirecionado ao portal de pagamento.
-                          </AlertDialogDescription>
-                        </AlertDialogHeader>
-                        <div className="grid gap-3 py-4">
-                          {Object.entries(planDetails)
-                            .filter(([key]) => {
-                              const order = ["inicial", "profissional", "franquias"];
-                              return order.indexOf(key) > order.indexOf(status?.plan_type || "");
-                            })
-                            .map(([key, plan]) => (
-                              <Button
-                                key={key}
-                                variant="outline"
-                                className="justify-between"
-                                onClick={() => handleUpgrade(key)}
-                                disabled={isUpgrading === key}
-                              >
-                                <span className="flex items-center gap-2">
-                                  {isUpgrading === key ? (
-                                    <Loader2 className="h-4 w-4 animate-spin" />
-                                  ) : (
-                                    <plan.icon className={`h-4 w-4 ${plan.color}`} />
-                                  )}
-                                  {plan.name}
-                                </span>
-                                <span className="text-muted-foreground">
-                                  R$ {plan.monthlyPrice}/mês
-                                </span>
-                              </Button>
-                            ))}
-                        </div>
-                        <AlertDialogFooter>
-                          <AlertDialogCancel>Cancelar</AlertDialogCancel>
-                        </AlertDialogFooter>
-                      </AlertDialogContent>
-                    </AlertDialog>
-                  )}
 
                   {/* Cancel Button - Visible for active subscriptions that are not already cancelling */}
                   {status?.plan_status === "active" && !isPartner && !isCancelling && (
@@ -568,17 +743,6 @@ export default function Assinatura() {
                       </AlertDialogContent>
                     </AlertDialog>
                   )}
-
-                  {/* Choose Plan Button - Only show here if there's no plan in the current plan card */}
-                  {hasStripeCustomer && (status?.plan_status === "trial" || status?.plan_status === "cancelled") && (
-                    <Button 
-                      className="w-full justify-start gap-2"
-                      onClick={() => window.location.href = "/escolher-plano"}
-                    >
-                      <CreditCard className="h-4 w-4" />
-                      Escolher um Plano
-                    </Button>
-                  )}
                 </div>
               </CardContent>
             </Card>
@@ -590,7 +754,7 @@ export default function Assinatura() {
           <CardContent className="pt-6">
             <div className="flex items-center gap-4">
               <div className="p-3 rounded-full bg-gold/20">
-                <CheckCircle className="h-6 w-6 text-gold" />
+                <Shield className="h-6 w-6 text-gold" />
               </div>
               <div>
                 <h3 className="font-semibold">Garantia de 30 Dias</h3>

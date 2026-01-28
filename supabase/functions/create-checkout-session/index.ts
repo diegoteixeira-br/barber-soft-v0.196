@@ -160,8 +160,8 @@ serve(async (req) => {
         },
       ],
       mode: "subscription",
-      success_url: `${origin}/dashboard?checkout=success`,
-      cancel_url: `${origin}/escolher-plano?checkout=cancelled`,
+      success_url: `${origin}/assinatura?checkout=success`,
+      cancel_url: `${origin}/assinatura?checkout=cancelled`,
       metadata: {
         company_id: company.id,
         plan: plan,
