@@ -1,4 +1,4 @@
-import { Phone, Calendar, Clock, Edit2, Trash2, Building2, BellOff, Eye, Users, Gift, Sparkles } from "lucide-react";
+import { Phone, Calendar, Clock, Edit2, Trash2, Building2, BellOff, Eye, Users, Gift, Sparkles, RefreshCw } from "lucide-react";
 import { Card, CardContent } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
@@ -8,6 +8,8 @@ import { formatDistanceToNow } from "date-fns";
 import { ptBR } from "date-fns/locale";
 import { useCurrentUnit } from "@/contexts/UnitContext";
 import { useUnits } from "@/hooks/useUnits";
+import { useSyncClientFidelity } from "@/hooks/useSyncClientFidelity";
+import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/ui/tooltip";
 
 interface ClientCardProps {
   client: Client;
@@ -23,6 +25,7 @@ export function ClientCard({ client, onEdit, onDelete, onView, showUnit = false 
   const currentUnit = units.find(u => u.id === currentUnitId);
   const fidelityEnabled = currentUnit?.fidelity_program_enabled ?? false;
   const fidelityThreshold = currentUnit?.fidelity_cuts_threshold ?? 10;
+  const syncFidelity = useSyncClientFidelity();
 
   const initials = client.name
     .split(" ")
@@ -139,6 +142,25 @@ export function ClientCard({ client, onEdit, onDelete, onView, showUnit = false 
                 {client.loyalty_cuts || 0}/{fidelityThreshold} cortes
               </Badge>
             )}
+            <Tooltip>
+              <TooltipTrigger asChild>
+                <Button
+                  variant="ghost"
+                  size="icon"
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    syncFidelity.mutate(client.id);
+                  }}
+                  disabled={syncFidelity.isPending}
+                  className="h-6 w-6 text-muted-foreground hover:text-primary"
+                >
+                  <RefreshCw className={`h-3.5 w-3.5 ${syncFidelity.isPending ? "animate-spin" : ""}`} />
+                </Button>
+              </TooltipTrigger>
+              <TooltipContent>
+                <p>Sincronizar fidelidade</p>
+              </TooltipContent>
+            </Tooltip>
           </div>
         )}
 
