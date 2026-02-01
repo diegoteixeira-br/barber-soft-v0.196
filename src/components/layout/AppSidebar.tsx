@@ -57,7 +57,6 @@ const menuItems = [
   { title: "Financeiro", url: "/financeiro", icon: DollarSign },
   { title: "Marketing", url: "/marketing", icon: Megaphone },
   { title: "Relatórios", url: "/relatorios", icon: BarChart3 },
-  { title: "Unidades", url: "/unidades", icon: Building2 },
   { title: "Configurações", url: "/configuracoes", icon: Settings },
 ];
 

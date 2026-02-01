@@ -1,6 +1,6 @@
 import { DashboardLayout } from "@/components/layout/DashboardLayout";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { Building2, Ban, FileText, Bell, Percent, Clock, UserCircle } from "lucide-react";
+import { Building2, Ban, FileText, Bell, Percent, Clock, UserCircle, Store } from "lucide-react";
 import { BusinessProfileTab } from "@/components/configuracoes/BusinessProfileTab";
 import { AccountTab } from "@/components/configuracoes/AccountTab";
 import { CancellationPolicyTab } from "@/components/configuracoes/CancellationPolicyTab";
@@ -8,6 +8,7 @@ import { PartnershipTermsTab } from "@/components/configuracoes/PartnershipTerms
 import { NotificationsTab } from "@/components/configuracoes/NotificationsTab";
 import { FinancialFeesTab } from "@/components/configuracoes/FinancialFeesTab";
 import { BusinessHoursTab } from "@/components/configuracoes/BusinessHoursTab";
+import { UnitsTab } from "@/components/configuracoes/UnitsTab";
 
 export default function Configuracoes() {
   return (
@@ -19,10 +20,14 @@ export default function Configuracoes() {
         </div>
         
         <Tabs defaultValue="profile" className="w-full">
-          <TabsList className="grid w-full grid-cols-7 lg:w-auto lg:inline-grid">
+          <TabsList className="grid w-full grid-cols-8 lg:w-auto lg:inline-grid">
             <TabsTrigger value="profile" className="gap-2">
               <Building2 className="h-4 w-4" />
               <span className="hidden sm:inline">Perfil</span>
+            </TabsTrigger>
+            <TabsTrigger value="units" className="gap-2">
+              <Store className="h-4 w-4" />
+              <span className="hidden sm:inline">Unidades</span>
             </TabsTrigger>
             <TabsTrigger value="hours" className="gap-2">
               <Clock className="h-4 w-4" />
@@ -53,6 +58,9 @@ export default function Configuracoes() {
           <div className="mt-6">
             <TabsContent value="profile">
               <BusinessProfileTab />
+            </TabsContent>
+            <TabsContent value="units">
+              <UnitsTab />
             </TabsContent>
             <TabsContent value="hours">
               <BusinessHoursTab />

@@ -1,0 +1,175 @@
+import { useState } from "react";
+import { UnitCard } from "@/components/units/UnitCard";
+import { UnitFormModal } from "@/components/units/UnitFormModal";
+import { UnitWhatsAppModal } from "@/components/units/UnitWhatsAppModal";
+import { UnitSettingsModal } from "@/components/units/UnitSettingsModal";
+import { useUnits, Unit } from "@/hooks/useUnits";
+import { useCurrentUnit } from "@/contexts/UnitContext";
+import { Button } from "@/components/ui/button";
+import { Plus, Building2 } from "lucide-react";
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from "@/components/ui/alert-dialog";
+import { Skeleton } from "@/components/ui/skeleton";
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
+
+export function UnitsTab() {
+  const { currentCompanyId } = useCurrentUnit();
+  const { units, isLoading, createUnit, updateUnit, deleteUnit, setAsHeadquarters, refetch } = useUnits(currentCompanyId);
+  const [isModalOpen, setIsModalOpen] = useState(false);
+  const [editingUnit, setEditingUnit] = useState<Unit | null>(null);
+  const [deletingUnit, setDeletingUnit] = useState<Unit | null>(null);
+  const [whatsAppUnit, setWhatsAppUnit] = useState<Unit | null>(null);
+  const [settingsUnit, setSettingsUnit] = useState<Unit | null>(null);
+
+  const handleOpenModal = (unit?: Unit) => {
+    setEditingUnit(unit || null);
+    setIsModalOpen(true);
+  };
+
+  const handleCloseModal = () => {
+    setIsModalOpen(false);
+    setEditingUnit(null);
+  };
+
+  const handleSubmit = (data: { name: string; address?: string; phone?: string; manager_name?: string }) => {
+    if (editingUnit) {
+      updateUnit.mutate({ id: editingUnit.id, ...data }, {
+        onSuccess: handleCloseModal,
+      });
+    } else {
+      createUnit.mutate(data, {
+        onSuccess: handleCloseModal,
+      });
+    }
+  };
+
+  const handleDelete = () => {
+    if (deletingUnit) {
+      deleteUnit.mutate(deletingUnit.id, {
+        onSuccess: () => setDeletingUnit(null),
+      });
+    }
+  };
+
+  const handleConfigureWhatsApp = (unit: Unit) => {
+    setWhatsAppUnit(unit);
+  };
+
+  const handleWhatsAppConnectionChange = () => {
+    refetch();
+  };
+
+  const handleSetHeadquarters = (unit: Unit) => {
+    setAsHeadquarters.mutate(unit.id);
+  };
+
+  const handleOpenSettings = (unit: Unit) => {
+    setSettingsUnit(unit);
+  };
+
+  const handleCloseSettings = () => {
+    setSettingsUnit(null);
+    refetch();
+  };
+
+  return (
+    <Card className="bg-card">
+      <CardHeader className="flex flex-row items-center justify-between">
+        <div>
+          <CardTitle>Unidades</CardTitle>
+          <CardDescription>Gerencie suas filiais e configure o WhatsApp de cada uma</CardDescription>
+        </div>
+        <Button onClick={() => handleOpenModal()} className="gap-2">
+          <Plus className="h-4 w-4" />
+          Nova Unidade
+        </Button>
+      </CardHeader>
+      <CardContent>
+        {isLoading ? (
+          <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
+            {[1, 2, 3].map((i) => (
+              <Skeleton key={i} className="h-40 rounded-lg" />
+            ))}
+          </div>
+        ) : units.length === 0 ? (
+          <div className="flex min-h-[300px] items-center justify-center rounded-lg border border-dashed border-border bg-card/50">
+            <div className="flex flex-col items-center gap-4 text-center">
+              <Building2 className="h-12 w-12 text-muted-foreground/50" />
+              <div>
+                <h3 className="text-lg font-medium text-foreground">Nenhuma unidade cadastrada</h3>
+                <p className="text-sm text-muted-foreground">Clique em "Nova Unidade" para começar</p>
+              </div>
+              <Button onClick={() => handleOpenModal()} className="gap-2">
+                <Plus className="h-4 w-4" />
+                Nova Unidade
+              </Button>
+            </div>
+          </div>
+        ) : (
+          <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
+            {units.map((unit) => (
+              <UnitCard
+                key={unit.id}
+                unit={unit}
+                onEdit={handleOpenModal}
+                onDelete={setDeletingUnit}
+                onConfigureWhatsApp={handleConfigureWhatsApp}
+                onSetHeadquarters={handleSetHeadquarters}
+                onSettings={handleOpenSettings}
+              />
+            ))}
+          </div>
+        )}
+      </CardContent>
+
+      <UnitFormModal
+        open={isModalOpen}
+        onClose={handleCloseModal}
+        onSubmit={handleSubmit}
+        unit={editingUnit}
+        isLoading={createUnit.isPending || updateUnit.isPending}
+      />
+
+      <UnitWhatsAppModal
+        open={!!whatsAppUnit}
+        onClose={() => setWhatsAppUnit(null)}
+        unit={whatsAppUnit}
+        onConnectionChange={handleWhatsAppConnectionChange}
+      />
+
+      <UnitSettingsModal
+        open={!!settingsUnit}
+        onClose={handleCloseSettings}
+        unit={settingsUnit}
+      />
+
+      <AlertDialog open={!!deletingUnit} onOpenChange={() => setDeletingUnit(null)}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Excluir unidade?</AlertDialogTitle>
+            <AlertDialogDescription>
+              Esta ação não pode ser desfeita. Todos os dados relacionados a esta unidade serão perdidos.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel>Cancelar</AlertDialogCancel>
+            <AlertDialogAction
+              onClick={handleDelete}
+              className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
+            >
+              {deleteUnit.isPending ? "Excluindo..." : "Excluir"}
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
+    </Card>
+  );
+}
