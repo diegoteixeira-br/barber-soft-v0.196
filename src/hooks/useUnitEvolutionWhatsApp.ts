@@ -370,6 +370,23 @@ export function useUnitEvolutionWhatsApp(unit: Unit | null): UseUnitEvolutionWha
       return;
     }
 
+    // IMPORTANT: Don't reset to disconnected if we're already connected or connecting
+    // This prevents race condition where stale unit data resets a successful connection
+    if (connectionState === "open" || connectionState === "connecting") {
+      console.log(`Skipping state reset - already in ${connectionState} state`);
+      if (unit?.evolution_instance_name) {
+        // Just update profile if available
+        if (unit.whatsapp_name || unit.whatsapp_phone || unit.whatsapp_picture_url) {
+          setProfile({
+            name: unit.whatsapp_name,
+            phone: unit.whatsapp_phone,
+            pictureUrl: unit.whatsapp_picture_url,
+          });
+        }
+      }
+      return;
+    }
+
     if (unit?.evolution_instance_name) {
       // Set initial profile from unit data if available
       if (unit.whatsapp_name || unit.whatsapp_phone || unit.whatsapp_picture_url) {
@@ -386,7 +403,7 @@ export function useUnitEvolutionWhatsApp(unit: Unit | null): UseUnitEvolutionWha
       setPairingCode(null);
       setProfile(null);
     }
-  }, [unit?.evolution_instance_name, checkStatus]);
+  }, [unit?.evolution_instance_name, checkStatus, connectionState]);
 
   // Cleanup polling on unmount
   useEffect(() => {

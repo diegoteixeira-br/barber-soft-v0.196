@@ -382,7 +382,9 @@ serve(async (req) => {
             
             if (Array.isArray(ownerData) && ownerData.length > 0) {
               const instance = ownerData[0];
-              profilePhone = instance.owner?.replace('@s.whatsapp.net', '') || null;
+              // ownerJid contains the phone number in format "55XXXXXXXXXXX@s.whatsapp.net"
+              profilePhone = instance.ownerJid?.replace('@s.whatsapp.net', '') || 
+                             instance.owner?.replace('@s.whatsapp.net', '') || null;
               profileName = instance.profileName || null;
               profilePicture = instance.profilePicUrl || null;
             }
