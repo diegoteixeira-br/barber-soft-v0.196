@@ -1,79 +1,110 @@
 
-# Plano: Implementar reCAPTCHA Enterprise no Formulário de Contato
+# Plano: Consolidar Páginas de Planos e Corrigir Erro de Checkout
 
-## Configuração Confirmada
-- **Site Key**: `6Le2q2EsAAAAALI1XXCLYyPsl3gfaulb_0JgYXs7`
-- **Secret Key**: Configurada como `RECAPTCHA_SECRET_KEY` nos secrets
-- **Tipo**: reCAPTCHA Enterprise (Google Cloud)
+## Problema Identificado
 
-## Implementação
+### 1. Erro de Checkout
+A Edge Function `create-checkout-session` **não está deployada** no servidor. O teste direto retornou erro 404 (NOT_FOUND). A função existe no código mas precisa ser deployada.
 
-### 1. Criar Edge Function: `supabase/functions/contact-form/index.ts`
+### 2. Duas Páginas de Planos
+Existem duas páginas quase idênticas:
+- `/escolher-plano` (EscolherPlano.tsx) - Página standalone
+- `/assinatura` (Assinatura.tsx) - Já tem os cards de planos integrados
 
-```typescript
-// Validação do token reCAPTCHA Enterprise
-const verifyUrl = "https://www.google.com/recaptcha/api/siteverify";
-const formData = new URLSearchParams();
-formData.append("secret", RECAPTCHA_SECRET_KEY);
-formData.append("response", token);
+O usuário quer manter apenas a página `/assinatura`.
 
-const response = await fetch(verifyUrl, {
-  method: "POST",
-  body: formData.toString(),
-});
+---
 
-const result = await response.json();
-// Aceitar apenas score >= 0.5
+## Arquitetura Atual vs Proposta
+
+```text
+ATUAL:
++------------------+     +------------------+
+|  Trial Expirado  | --> | /escolher-plano  | --> Checkout (ERRO 404)
++------------------+     +------------------+
+         |                       |
+         v                       v
++------------------+     +------------------+
+|   /assinatura    | --> |   Checkout       | --> Checkout (ERRO 404)
+|  (com cards)     |     +------------------+
++------------------+
+
+PROPOSTA:
++------------------+     +------------------+
+|  Trial Expirado  | --> |   /assinatura    | --> Checkout (FUNCIONANDO)
++------------------+     |   (única página) |
+                         +------------------+
 ```
 
-### 2. Atualizar Frontend: `src/pages/institucional/Contato.tsx`
+---
 
-**Carregar script Enterprise:**
-```typescript
-const script = document.createElement('script');
-script.src = `https://www.google.com/recaptcha/enterprise.js?render=${SITE_KEY}`;
-document.head.appendChild(script);
+## Etapa 1: Corrigir Erro de Checkout
+
+**Ação:** Deploy da Edge Function `create-checkout-session`
+
+A função já existe em `supabase/functions/create-checkout-session/index.ts` mas não está ativa no servidor. Será feito o deploy manual.
+
+---
+
+## Etapa 2: Consolidar em Uma Única Página
+
+### 2.1 Remover página EscolherPlano
+
+**Arquivo a deletar:** `src/pages/EscolherPlano.tsx`
+
+### 2.2 Atualizar Rotas (App.tsx)
+
+Remover a rota `/escolher-plano` do arquivo de rotas.
+
+```text
+Antes:
+<Route path="/escolher-plano" element={<EscolherPlano />} />
+
+Depois:
+(removido)
 ```
 
-**Gerar token no submit:**
-```typescript
-const token = await window.grecaptcha.enterprise.execute(SITE_KEY, { 
-  action: 'contact_form' 
-});
+### 2.3 Atualizar SubscriptionGuard
+
+Modificar o botão "Escolher um Plano" na tela de "Período de Teste Expirado" para redirecionar para `/assinatura` ao invés de `/escolher-plano`.
+
+```text
+Antes:
+navigate("/escolher-plano")
+
+Depois:
+navigate("/assinatura")
 ```
 
-**Enviar para edge function:**
-```typescript
-const { data, error } = await supabase.functions.invoke('contact-form', {
-  body: { name, phone, email, subject, message, recaptchaToken }
-});
-```
+### 2.4 Atualizar paths exempts
 
-### 3. Atualizar Config: `supabase/config.toml`
+Remover `/escolher-plano` da lista de paths exempts e garantir que `/assinatura` esteja na lista.
 
-```toml
-[functions.contact-form]
-verify_jwt = false
-```
+---
 
-## Arquivos a Criar/Modificar
+## Resumo das Alterações
 
-| Arquivo | Ação |
-|---------|------|
-| `supabase/functions/contact-form/index.ts` | Criar |
-| `src/pages/institucional/Contato.tsx` | Modificar |
-| `supabase/config.toml` | Adicionar função |
+| Arquivo | Ação | Descrição |
+|---------|------|-----------|
+| `supabase/functions/create-checkout-session/` | Deploy | Fazer deploy da função |
+| `src/pages/EscolherPlano.tsx` | Deletar | Remover página duplicada |
+| `src/App.tsx` | Modificar | Remover rota `/escolher-plano` e import |
+| `src/components/auth/SubscriptionGuard.tsx` | Modificar | Redirecionar para `/assinatura` |
 
-## Funcionalidades
+---
 
-1. **Carregamento invisível** - Script carrega em background
-2. **Validação por score** - Rejeita se score < 0.5
-3. **Feedback visual** - Botão desabilitado enquanto carrega
-4. **Texto legal** - Links para políticas do Google (obrigatório)
-5. **Logs detalhados** - Para monitoramento de tentativas
+## Fluxo Final do Usuário
 
-## Resultado Esperado
+1. **Trial em andamento:** Acesso normal ao sistema, badge de "X dias restantes" visível
+2. **Trial expirado:** Tela mostra "Período de Teste Expirado" → Botão leva para `/assinatura`
+3. **Na página /assinatura:** Usuário vê cards de planos, seleciona um, checkout do Stripe abre
+4. **Após pagamento:** Retorna para `/assinatura?checkout=success`, status atualizado
 
-- Bots serão bloqueados automaticamente
-- Usuários legítimos não verão captcha visual
-- Score baixo = erro "Verificação de segurança falhou"
+---
+
+## Benefícios
+
+1. **Experiência simplificada** - Uma única página para gerenciar assinatura
+2. **Menos código** - Remoção de ~276 linhas duplicadas
+3. **Menos confusão** - Usuário não precisa navegar entre páginas diferentes
+4. **Checkout funcionando** - Edge function deployada e operacional
