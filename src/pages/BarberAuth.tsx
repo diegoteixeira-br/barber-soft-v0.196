@@ -6,6 +6,7 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
 import { useToast } from "@/hooks/use-toast";
+import { useRecaptcha } from "@/hooks/useRecaptcha";
 import { Scissors, Mail, Lock, Loader2 } from "lucide-react";
 
 export default function BarberAuth() {
@@ -15,14 +16,13 @@ export default function BarberAuth() {
   const [isCheckingSession, setIsCheckingSession] = useState(true);
   const navigate = useNavigate();
   const { toast } = useToast();
+  const { isReady: isRecaptchaReady, executeRecaptcha } = useRecaptcha();
 
-  // Check if already logged in
   useEffect(() => {
     const checkSession = async () => {
       const { data: { session } } = await supabase.auth.getSession();
       
       if (session) {
-        // Check if user is a barber
         const { data: roleData } = await supabase
           .from("user_roles")
           .select("role")
@@ -42,11 +42,55 @@ export default function BarberAuth() {
     checkSession();
   }, [navigate]);
 
+  const verifyRecaptcha = async (): Promise<boolean> => {
+    const token = await executeRecaptcha("barber_login");
+    if (!token) {
+      toast({
+        title: "Erro de segurança",
+        description: "Verificação não disponível. Tente novamente.",
+        variant: "destructive",
+      });
+      return false;
+    }
+
+    try {
+      const { data, error } = await supabase.functions.invoke("verify-recaptcha", {
+        body: { token, action: "barber_login" },
+      });
+
+      if (error || !data?.success) {
+        toast({
+          title: "Verificação falhou",
+          description: "Por favor, tente novamente.",
+          variant: "destructive",
+        });
+        return false;
+      }
+
+      return true;
+    } catch (err) {
+      console.error("reCAPTCHA verification error:", err);
+      toast({
+        title: "Erro de verificação",
+        description: "Não foi possível validar. Tente novamente.",
+        variant: "destructive",
+      });
+      return false;
+    }
+  };
+
   const handleLogin = async (e: React.FormEvent) => {
     e.preventDefault();
     setIsLoading(true);
 
     try {
+      // Verify reCAPTCHA first
+      const isHuman = await verifyRecaptcha();
+      if (!isHuman) {
+        setIsLoading(false);
+        return;
+      }
+
       const { data, error } = await supabase.auth.signInWithPassword({
         email,
         password,
@@ -78,7 +122,6 @@ export default function BarberAuth() {
         return;
       }
 
-      // Check if user is a barber
       const { data: roleData } = await supabase
         .from("user_roles")
         .select("role")
@@ -171,7 +214,11 @@ export default function BarberAuth() {
               </div>
             </div>
 
-            <Button type="submit" className="w-full" disabled={isLoading}>
+            <Button 
+              type="submit" 
+              className="w-full" 
+              disabled={isLoading || !isRecaptchaReady}
+            >
               {isLoading ? (
                 <>
                   <Loader2 className="mr-2 h-4 w-4 animate-spin" />
@@ -191,6 +238,28 @@ export default function BarberAuth() {
               </a>
             </p>
           </div>
+
+          <p className="text-xs text-muted-foreground text-center mt-4">
+            Este site é protegido pelo reCAPTCHA e a{" "}
+            <a
+              href="https://policies.google.com/privacy"
+              target="_blank"
+              rel="noopener noreferrer"
+              className="underline hover:text-foreground"
+            >
+              Política de Privacidade
+            </a>{" "}
+            e{" "}
+            <a
+              href="https://policies.google.com/terms"
+              target="_blank"
+              rel="noopener noreferrer"
+              className="underline hover:text-foreground"
+            >
+              Termos de Serviço
+            </a>{" "}
+            do Google se aplicam.
+          </p>
         </CardContent>
       </Card>
     </div>

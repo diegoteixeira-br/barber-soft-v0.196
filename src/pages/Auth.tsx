@@ -1,6 +1,6 @@
 import { useState, useEffect } from "react";
 import { useNavigate, useSearchParams, Link } from "react-router-dom";
-import { Scissors, Mail, Lock, Store, Eye, EyeOff, Loader2, ArrowLeft, ChevronDown } from "lucide-react";
+import { Scissors, Mail, Lock, Store, Eye, EyeOff, Loader2, ArrowLeft } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -9,6 +9,7 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { supabase } from "@/integrations/supabase/client";
 import { useToast } from "@/hooks/use-toast";
+import { useRecaptcha } from "@/hooks/useRecaptcha";
 import { z } from "zod";
 
 const PLANS = [
@@ -26,6 +27,7 @@ export default function Auth() {
   const navigate = useNavigate();
   const [searchParams] = useSearchParams();
   const { toast } = useToast();
+  const { isReady: isRecaptchaReady, executeRecaptcha } = useRecaptcha();
   const [isLoading, setIsLoading] = useState(false);
   const [showPassword, setShowPassword] = useState(false);
   const [view, setView] = useState<AuthView>("auth");
@@ -34,8 +36,8 @@ export default function Auth() {
   const defaultTab = searchParams.get("tab") === "signup" ? "signup" : "login";
   
   // Get plan parameters from URL
-  const planFromUrl = searchParams.get("plan"); // "inicial", "profissional", "franquias"
-  const billingFromUrl = searchParams.get("billing"); // "monthly", "annual"
+  const planFromUrl = searchParams.get("plan");
+  const billingFromUrl = searchParams.get("billing");
 
   // Login form state
   const [loginEmail, setLoginEmail] = useState("");
@@ -49,7 +51,6 @@ export default function Auth() {
   const [selectedPlan, setSelectedPlan] = useState(planFromUrl || "profissional");
   const [selectedBilling, setSelectedBilling] = useState(billingFromUrl || "monthly");
 
-  // Update selected plan when URL params change
   useEffect(() => {
     if (planFromUrl) {
       setSelectedPlan(planFromUrl);
@@ -121,12 +122,56 @@ export default function Auth() {
     }
   };
 
+  const verifyRecaptcha = async (action: string): Promise<boolean> => {
+    const token = await executeRecaptcha(action);
+    if (!token) {
+      toast({
+        title: "Erro de segurança",
+        description: "Verificação não disponível. Tente novamente.",
+        variant: "destructive",
+      });
+      return false;
+    }
+
+    try {
+      const { data, error } = await supabase.functions.invoke("verify-recaptcha", {
+        body: { token, action },
+      });
+
+      if (error || !data?.success) {
+        toast({
+          title: "Verificação falhou",
+          description: "Por favor, tente novamente.",
+          variant: "destructive",
+        });
+        return false;
+      }
+
+      return true;
+    } catch (err) {
+      console.error("reCAPTCHA verification error:", err);
+      toast({
+        title: "Erro de verificação",
+        description: "Não foi possível validar. Tente novamente.",
+        variant: "destructive",
+      });
+      return false;
+    }
+  };
+
   const handleLogin = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!validateLogin()) return;
 
     setIsLoading(true);
     try {
+      // Verify reCAPTCHA first
+      const isHuman = await verifyRecaptcha("login");
+      if (!isHuman) {
+        setIsLoading(false);
+        return;
+      }
+
       const { error } = await supabase.auth.signInWithPassword({
         email: loginEmail,
         password: loginPassword,
@@ -160,6 +205,13 @@ export default function Auth() {
 
     setIsLoading(true);
     try {
+      // Verify reCAPTCHA first
+      const isHuman = await verifyRecaptcha("signup");
+      if (!isHuman) {
+        setIsLoading(false);
+        return;
+      }
+
       const redirectUrl = `${window.location.origin}/`;
 
       const { data, error } = await supabase.auth.signUp({
@@ -169,7 +221,7 @@ export default function Auth() {
           emailRedirectTo: redirectUrl,
           data: {
             full_name: signupName,
-            business_name: signupName, // Store the barbershop name
+            business_name: signupName,
           },
         },
       });
@@ -188,7 +240,6 @@ export default function Auth() {
       }
 
       if (data.user) {
-        // Create company immediately with the barbershop name
         const trialEndsAt = new Date();
         trialEndsAt.setDate(trialEndsAt.getDate() + 7);
         
@@ -204,8 +255,6 @@ export default function Auth() {
 
         if (companyError) {
           console.error("Error creating company:", companyError);
-          // Don't block the flow if company creation fails
-          // UnitContext will create it as fallback
         }
 
         toast({
@@ -213,7 +262,6 @@ export default function Auth() {
           description: "Redirecionando para o checkout...",
         });
 
-        // Proceed to checkout with the selected plan
         try {
           const { data: checkoutData, error: checkoutError } = await supabase.functions.invoke(
             "create-checkout-session",
@@ -264,6 +312,13 @@ export default function Auth() {
 
     setIsLoading(true);
     try {
+      // Verify reCAPTCHA first
+      const isHuman = await verifyRecaptcha("forgot_password");
+      if (!isHuman) {
+        setIsLoading(false);
+        return;
+      }
+
       const redirectUrl = `${window.location.origin}/auth?tab=login`;
       
       const { error } = await supabase.auth.resetPasswordForEmail(resetEmail, {
@@ -289,11 +344,34 @@ export default function Auth() {
     }
   };
 
+  const RecaptchaLegal = () => (
+    <p className="text-xs text-muted-foreground text-center mt-4">
+      Este site é protegido pelo reCAPTCHA e a{" "}
+      <a
+        href="https://policies.google.com/privacy"
+        target="_blank"
+        rel="noopener noreferrer"
+        className="underline hover:text-foreground"
+      >
+        Política de Privacidade
+      </a>{" "}
+      e{" "}
+      <a
+        href="https://policies.google.com/terms"
+        target="_blank"
+        rel="noopener noreferrer"
+        className="underline hover:text-foreground"
+      >
+        Termos de Serviço
+      </a>{" "}
+      do Google se aplicam.
+    </p>
+  );
+
   if (view === "forgot-password") {
     return (
       <div className="flex min-h-screen items-center justify-center bg-background p-4">
         <div className="w-full max-w-md">
-          {/* Logo */}
           <Link to="/" className="mb-8 flex flex-col items-center group">
             <div className="mb-4 flex h-16 w-16 items-center justify-center rounded-2xl bg-primary glow-gold group-hover:scale-105 transition-transform">
               <Scissors className="h-8 w-8 text-primary-foreground" />
@@ -327,7 +405,11 @@ export default function Auth() {
                   </div>
                 </div>
 
-                <Button type="submit" className="w-full bg-primary hover:bg-primary/90" disabled={isLoading}>
+                <Button 
+                  type="submit" 
+                  className="w-full bg-primary hover:bg-primary/90" 
+                  disabled={isLoading || !isRecaptchaReady}
+                >
                   {isLoading ? (
                     <>
                       <Loader2 className="mr-2 h-4 w-4 animate-spin" />
@@ -348,12 +430,13 @@ export default function Auth() {
                   Voltar para o login
                 </Button>
               </form>
+              <RecaptchaLegal />
             </CardContent>
           </Card>
 
-        <p className="mt-6 text-center text-sm text-muted-foreground">
-          © {new Date().getFullYear()} BarberSoft. Todos os direitos reservados.
-        </p>
+          <p className="mt-6 text-center text-sm text-muted-foreground">
+            © {new Date().getFullYear()} BarberSoft. Todos os direitos reservados.
+          </p>
         </div>
       </div>
     );
@@ -362,7 +445,6 @@ export default function Auth() {
   return (
     <div className="flex min-h-screen items-center justify-center bg-background p-4">
       <div className="w-full max-w-md">
-        {/* Logo */}
         <Link to="/" className="mb-8 flex flex-col items-center group">
           <div className="mb-4 flex h-16 w-16 items-center justify-center rounded-2xl bg-primary glow-gold group-hover:scale-105 transition-transform">
             <Scissors className="h-8 w-8 text-primary-foreground" />
@@ -370,7 +452,6 @@ export default function Auth() {
           <h1 className="text-3xl font-bold text-gold group-hover:text-gold/80 transition-colors">BarberSoft</h1>
           <p className="mt-1 text-muted-foreground">Gestão de Barbearias</p>
         </Link>
-
 
         <Card className="border-border bg-card">
           <Tabs defaultValue={defaultTab} className="w-full">
@@ -428,7 +509,11 @@ export default function Auth() {
                     </div>
                   </div>
 
-                  <Button type="submit" className="w-full bg-primary hover:bg-primary/90" disabled={isLoading}>
+                  <Button 
+                    type="submit" 
+                    className="w-full bg-primary hover:bg-primary/90" 
+                    disabled={isLoading || !isRecaptchaReady}
+                  >
                     {isLoading ? (
                       <>
                         <Loader2 className="mr-2 h-4 w-4 animate-spin" />
@@ -447,6 +532,7 @@ export default function Auth() {
                     Esqueci minha senha
                   </button>
                 </form>
+                <RecaptchaLegal />
               </TabsContent>
 
               {/* Signup Tab */}
@@ -545,7 +631,11 @@ export default function Auth() {
                     </div>
                   </div>
 
-                  <Button type="submit" className="w-full bg-accent hover:bg-accent/90" disabled={isLoading}>
+                  <Button 
+                    type="submit" 
+                    className="w-full bg-accent hover:bg-accent/90" 
+                    disabled={isLoading || !isRecaptchaReady}
+                  >
                     {isLoading ? (
                       <>
                         <Loader2 className="mr-2 h-4 w-4 animate-spin" />
@@ -556,6 +646,7 @@ export default function Auth() {
                     )}
                   </Button>
                 </form>
+                <RecaptchaLegal />
               </TabsContent>
             </CardContent>
           </Tabs>

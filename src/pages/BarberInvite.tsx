@@ -7,6 +7,7 @@ import { Label } from "@/components/ui/label";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Loader2, Scissors, AlertCircle, CheckCircle2 } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
+import { useRecaptcha } from "@/hooks/useRecaptcha";
 
 interface BarberInfo {
   id: string;
@@ -20,6 +21,7 @@ export default function BarberInvite() {
   const { token } = useParams<{ token: string }>();
   const navigate = useNavigate();
   const { toast } = useToast();
+  const { isReady: isRecaptchaReady, executeRecaptcha } = useRecaptcha();
 
   const [isValidating, setIsValidating] = useState(true);
   const [barberInfo, setBarberInfo] = useState<BarberInfo | null>(null);
@@ -40,7 +42,6 @@ export default function BarberInvite() {
       }
 
       try {
-        // Validate token via secure edge function (no public table access)
         const { data: response, error: invokeError } = await supabase.functions.invoke(
           "validate-barber-invite",
           {
@@ -80,6 +81,43 @@ export default function BarberInvite() {
     validateToken();
   }, [token]);
 
+  const verifyRecaptcha = async (action: string): Promise<boolean> => {
+    const recaptchaToken = await executeRecaptcha(action);
+    if (!recaptchaToken) {
+      toast({
+        title: "Erro de segurança",
+        description: "Verificação não disponível. Tente novamente.",
+        variant: "destructive",
+      });
+      return false;
+    }
+
+    try {
+      const { data, error } = await supabase.functions.invoke("verify-recaptcha", {
+        body: { token: recaptchaToken, action },
+      });
+
+      if (error || !data?.success) {
+        toast({
+          title: "Verificação falhou",
+          description: "Por favor, tente novamente.",
+          variant: "destructive",
+        });
+        return false;
+      }
+
+      return true;
+    } catch (err) {
+      console.error("reCAPTCHA verification error:", err);
+      toast({
+        title: "Erro de verificação",
+        description: "Não foi possível validar. Tente novamente.",
+        variant: "destructive",
+      });
+      return false;
+    }
+  };
+
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
 
@@ -106,8 +144,15 @@ export default function BarberInvite() {
     setIsSubmitting(true);
 
     try {
+      // Verify reCAPTCHA first
+      const action = isLogin ? "barber_invite_login" : "barber_invite_signup";
+      const isHuman = await verifyRecaptcha(action);
+      if (!isHuman) {
+        setIsSubmitting(false);
+        return;
+      }
+
       if (isLogin) {
-        // Login flow
         const { data: authData, error: authError } = await supabase.auth.signInWithPassword({
           email,
           password,
@@ -115,7 +160,6 @@ export default function BarberInvite() {
 
         if (authError) throw authError;
 
-        // Link user to barber using edge function
         const { error: linkError } = await supabase.functions.invoke("link-barber-account", {
           body: {
             barberId: barberInfo.id,
@@ -133,7 +177,6 @@ export default function BarberInvite() {
 
         navigate("/barber");
       } else {
-        // Signup flow
         const { data: authData, error: authError } = await supabase.auth.signUp({
           email,
           password,
@@ -149,7 +192,6 @@ export default function BarberInvite() {
         if (authError) throw authError;
 
         if (authData.user) {
-          // Link user to barber using edge function
           const { error: linkError } = await supabase.functions.invoke("link-barber-account", {
             body: {
               barberId: barberInfo.id,
@@ -160,7 +202,6 @@ export default function BarberInvite() {
 
           if (linkError) {
             console.error("Link error:", linkError);
-            // Don't throw, account was created
           }
         }
 
@@ -272,7 +313,11 @@ export default function BarberInvite() {
               </div>
             )}
 
-            <Button type="submit" className="w-full" disabled={isSubmitting}>
+            <Button 
+              type="submit" 
+              className="w-full" 
+              disabled={isSubmitting || !isRecaptchaReady}
+            >
               {isSubmitting ? (
                 <>
                   <Loader2 className="mr-2 h-4 w-4 animate-spin" />
@@ -317,6 +362,28 @@ export default function BarberInvite() {
               )}
             </div>
           </form>
+
+          <p className="text-xs text-muted-foreground text-center mt-4">
+            Este site é protegido pelo reCAPTCHA e a{" "}
+            <a
+              href="https://policies.google.com/privacy"
+              target="_blank"
+              rel="noopener noreferrer"
+              className="underline hover:text-foreground"
+            >
+              Política de Privacidade
+            </a>{" "}
+            e{" "}
+            <a
+              href="https://policies.google.com/terms"
+              target="_blank"
+              rel="noopener noreferrer"
+              className="underline hover:text-foreground"
+            >
+              Termos de Serviço
+            </a>{" "}
+            do Google se aplicam.
+          </p>
         </CardContent>
       </Card>
     </div>
