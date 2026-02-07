@@ -31,6 +31,7 @@ import NotFound from "./pages/NotFound";
 import AdminDashboard from "./pages/admin/AdminDashboard";
 import AdminCompanies from "./pages/admin/AdminCompanies";
 import AdminFeedbacks from "./pages/admin/AdminFeedbacks";
+import AdminExportData from "./pages/admin/AdminExportData";
 import AdminSettings from "./pages/admin/AdminSettings";
 
 // Institutional pages
@@ -101,6 +102,7 @@ const App = () => (
             <Route path="/admin" element={<SuperAdminGuard><AdminDashboard /></SuperAdminGuard>} />
             <Route path="/admin/companies" element={<SuperAdminGuard><AdminCompanies /></SuperAdminGuard>} />
             <Route path="/admin/feedbacks" element={<SuperAdminGuard><AdminFeedbacks /></SuperAdminGuard>} />
+            <Route path="/admin/export" element={<SuperAdminGuard><AdminExportData /></SuperAdminGuard>} />
             <Route path="/admin/settings" element={<SuperAdminGuard><AdminSettings /></SuperAdminGuard>} />
             
             {/* Institutional Pages */}
